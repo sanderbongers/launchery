@@ -8,7 +8,14 @@
         android:name="android.hardware.touchscreen"
         android:required="false" />
 
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+        </intent>
+    </queries>
+
     <application
+        android:name=".StauncherApplication"
         android:banner="@drawable/banner"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"

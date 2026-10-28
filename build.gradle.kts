@@ -4,15 +4,20 @@ plugins {
     alias(libs.plugins.spotless)
 }
 
+// Pruning build directories while walking the tree keeps Spotless from reading files that a parallel task deletes.
+fun sources(pattern: String) =
+    fileTree(rootDir) {
+        include(pattern)
+        exclude("**/build/**", "**/.gradle/**")
+    }
+
 spotless {
     kotlin {
-        target("**/*.kt")
-        targetExclude("**/build/**")
+        target(sources("**/*.kt"))
         ktlint(libs.versions.ktlint.get())
     }
     kotlinGradle {
-        target("**/*.gradle.kts")
-        targetExclude("**/build/**")
+        target(sources("**/*.gradle.kts"))
         ktlint(libs.versions.ktlint.get())
     }
 }
