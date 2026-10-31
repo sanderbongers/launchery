@@ -2,4 +2,16 @@
 <resources>
     <string name="app_name">Stauncher</string>
     <string name="launch_failed">Can’t open %1$s</string>
+    <string name="settings">Settings</string>
+    <string name="system_settings">System settings</string>
+    <string name="stauncher_settings">Stauncher settings</string>
+    <string name="action_move">Move</string>
+    <string name="action_hide">Hide</string>
+    <string name="action_app_info">App info</string>
+    <string name="action_uninstall">Uninstall</string>
+    <string name="move_hint">◀ ▶ move · OK place · Back cancel</string>
+    <string name="no_apps">No apps to show</string>
+    <string name="no_hidden_apps">No hidden apps</string>
+    <string name="hidden_apps">Hidden apps</string>
+    <string name="unhide">Unhide</string>
 </resources>

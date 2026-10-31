@@ -2,10 +2,20 @@ package rs.bonge.stauncher
 
 import android.app.Application
 import android.content.pm.LauncherApps
+import androidx.datastore.dataStoreFile
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import rs.bonge.stauncher.apps.AppActions
 import rs.bonge.stauncher.apps.AppRepository
 import rs.bonge.stauncher.apps.BannerLoader
 import rs.bonge.stauncher.apps.PackageChanges
+import rs.bonge.stauncher.layout.Arranged
+import rs.bonge.stauncher.layout.LayoutRepository
+import rs.bonge.stauncher.layout.arrangeApps
+import rs.bonge.stauncher.layout.createLayoutStore
 
 /** Builds the app-wide objects once; constructor injection by hand keeps the dependencies visible. */
 class AppContainer(
@@ -17,6 +27,16 @@ class AppContainer(
             selfPackage = application.packageName,
             packageChanges = PackageChanges(application.getSystemService(LauncherApps::class.java)),
         )
+    val layoutRepository =
+        LayoutRepository(
+            createLayoutStore(
+                file = application.dataStoreFile("layout.json"),
+                scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+            ),
+        )
+
+    /** Emits only once both the installed apps and the saved layout are known, so the order never flashes. */
+    val arrangedApps: Flow<Arranged> = combine(appRepository.apps, layoutRepository.layout, ::arrangeApps)
     val bannerLoader = BannerLoader(application.packageManager)
     val appActions = AppActions(application)
 }

@@ -9,7 +9,10 @@ import androidx.core.graphics.createBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** Renders an app's banner, or its icon when it has no banner, at the size the card needs. */
+/**
+ * Renders an app's banner, or its icon when it has no banner, at the size the card needs. With `iconOnly` it renders
+ * the icon even for an app that has a banner, for the places that show an app small.
+ */
 class BannerLoader(
     private val packageManager: PackageManager,
 ) {
@@ -19,6 +22,7 @@ class BannerLoader(
         val lastUpdateTime: Long,
         val width: Int,
         val height: Int,
+        val iconOnly: Boolean,
     )
 
     private val cache =
@@ -33,16 +37,18 @@ class BannerLoader(
         app: InstalledApp,
         width: Int,
         height: Int,
-    ): Bitmap? = cache[key(app, width, height)]
+        iconOnly: Boolean = false,
+    ): Bitmap? = cache[key(app, width, height, iconOnly)]
 
     suspend fun load(
         app: InstalledApp,
         width: Int,
         height: Int,
+        iconOnly: Boolean = false,
     ): Bitmap? {
-        peek(app, width, height)?.let { return it }
-        val bitmap = withContext(Dispatchers.IO) { render(app, width, height) } ?: return null
-        cache.put(key(app, width, height), bitmap)
+        peek(app, width, height, iconOnly)?.let { return it }
+        val bitmap = withContext(Dispatchers.IO) { render(app, width, height, iconOnly) } ?: return null
+        cache.put(key(app, width, height, iconOnly), bitmap)
         return bitmap
     }
 
@@ -50,17 +56,19 @@ class BannerLoader(
         app: InstalledApp,
         width: Int,
         height: Int,
-    ) = Key(app.packageName, app.lastUpdateTime, width, height)
+        iconOnly: Boolean,
+    ) = Key(app.packageName, app.lastUpdateTime, width, height, iconOnly)
 
     private fun render(
         app: InstalledApp,
         width: Int,
         height: Int,
+        iconOnly: Boolean,
     ): Bitmap? {
         val component = ComponentName(app.packageName, app.className)
         val drawable =
             try {
-                if (app.hasBanner) {
+                if (app.hasBanner && !iconOnly) {
                     packageManager.getActivityBanner(component)
                 } else {
                     packageManager.getActivityIcon(component)

@@ -7,6 +7,7 @@ data class InstalledApp(
     val label: String,
     val leanback: Boolean,
     val hasBanner: Boolean,
+    val system: Boolean,
     val firstInstallTime: Long,
     val lastUpdateTime: Long,
 )

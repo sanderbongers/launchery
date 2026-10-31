@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Declares the home activity as a plain launcher-only app without a banner, like a sideloaded phone app. It
+         must not declare HOME, or Home on the emulator would offer it as a second home app. -->
+    <application tools:remove="android:banner">
+        <activity
+            android:name=".HomeActivity"
+            android:exported="true"
+            tools:node="replace">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

@@ -45,6 +45,7 @@ class AppRowTest {
                 label = "App $it",
                 leanback = true,
                 hasBanner = false,
+                system = false,
                 firstInstallTime = it.toLong(),
                 lastUpdateTime = it.toLong(),
             )
@@ -54,8 +55,12 @@ class AppRowTest {
         rule.setContent {
             AppRow(
                 apps = apps,
+                mode = HomeMode.Browsing,
                 bannerLoader = bannerLoader,
                 onLaunch = { launched += it.packageName },
+                onOpenActions = {},
+                onMoveBy = {},
+                onDrop = {},
                 modifier = Modifier.fillMaxWidth(),
             )
         }

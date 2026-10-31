@@ -3,5 +3,8 @@
     <color name="background">#0E0E10</color>
     <color name="card_surface">#26262C</color>
     <color name="ic_launcher_background">#1C1C21</color>
+    <color name="panel_surface">#1C1C21</color>
+    <color name="scrim">#B3000000</color>
     <color name="text_primary">#ECECF0</color>
+    <color name="text_secondary">#A9A9B5</color>
 </resources>

@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.tv.material3.Border
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Surface
@@ -46,17 +47,20 @@ private val IconSize = 48.dp
 private val LabelAreaHeight = 32.dp
 private val LabelTopGap = 12.dp
 private const val FOCUSED_SCALE = 1.1f
+private const val LIFTED_SCALE = 1.2f
 private val FocusBorderWidth = 3.dp
 
 /**
  * A banner card shows its name below it while focused. An icon-only card, for an app without a banner, shows its name
- * inside the card at all times.
+ * inside the card at all times. A [lifted] card, one that is being moved, grows a little further than a focused one.
  */
 @Composable
 fun AppCard(
     app: InstalledApp,
     bannerLoader: BannerLoader,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    lifted: Boolean,
     modifier: Modifier = Modifier,
 ) {
     var focused by remember { mutableStateOf(false) }
@@ -64,11 +68,13 @@ fun AppCard(
     val surfaceColor = colorResource(R.color.card_surface)
 
     Column(
-        modifier = Modifier.width(CardWidth),
+        // A lifted card grows past the gap to its neighbours, so it is drawn over them.
+        modifier = Modifier.width(CardWidth).zIndex(if (lifted) 1f else 0f),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Surface(
             onClick = onClick,
+            onLongClick = onLongClick,
             modifier =
                 modifier
                     .size(CardWidth, CardHeight)
@@ -81,7 +87,7 @@ fun AppCard(
                     focusedContainerColor = surfaceColor,
                     pressedContainerColor = surfaceColor,
                 ),
-            scale = ClickableSurfaceDefaults.scale(focusedScale = FOCUSED_SCALE),
+            scale = ClickableSurfaceDefaults.scale(focusedScale = if (lifted) LIFTED_SCALE else FOCUSED_SCALE),
             border =
                 ClickableSurfaceDefaults.border(
                     focusedBorder = Border(BorderStroke(FocusBorderWidth, Color.White), shape = shape),
@@ -157,20 +163,22 @@ private fun IconAndName(
 }
 
 @Composable
-private fun rememberArt(
+internal fun rememberArt(
     app: InstalledApp,
     bannerLoader: BannerLoader,
     widthPx: Int,
     heightPx: Int,
+    iconOnly: Boolean = false,
 ): ImageBitmap? {
     val bitmap by produceState(
-        initialValue = bannerLoader.peek(app, widthPx, heightPx),
+        initialValue = bannerLoader.peek(app, widthPx, heightPx, iconOnly),
         app.packageName,
         app.lastUpdateTime,
         widthPx,
         heightPx,
+        iconOnly,
     ) {
-        value = bannerLoader.load(app, widthPx, heightPx)
+        value = bannerLoader.load(app, widthPx, heightPx, iconOnly)
     }
     return remember(bitmap) { bitmap?.asImageBitmap() }
 }

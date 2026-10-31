@@ -2,6 +2,7 @@ package rs.bonge.stauncher.apps
 
 import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
@@ -63,6 +64,7 @@ class AppRepository(
                 label = activityInfo.loadLabel(packageManager).toString(),
                 leanback = entry.leanback,
                 hasBanner = activityInfo.banner != 0 || activityInfo.applicationInfo.banner != 0,
+                system = activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM != 0,
                 firstInstallTime = packageInfo.firstInstallTime,
                 lastUpdateTime = packageInfo.lastUpdateTime,
             )
