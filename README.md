@@ -4,8 +4,16 @@ Stauncher is an alternative app launcher for Android TV and Google TV that mainl
 
 ## Status
 
-Early development: the project builds and shows an empty home screen. The plan is in [docs/plan.md](docs/plan.md) and
-the reasoning behind the choices in [docs/decisions.md](docs/decisions.md).
+Early development: Stauncher works as a home screen on a Chromecast with Google TV and has no release yet. The plan is
+in [docs/plan.md](docs/plan.md) and the reasoning behind the choices in [docs/decisions.md](docs/decisions.md).
+
+## Using it
+
+- Select starts an app. Holding select opens its actions: App info, Move, Hide and Uninstall. Force stop is in App info.
+- Left and right move along the row. At the first or the last app, hold the key to break through to the other end. A
+  short press there does nothing, so a stray press never loops the row.
+- Up from the row reaches the cog. Select opens the Stauncher settings, where "Hidden apps" lists what you hid and
+  "All settings" opens the system settings. Holding select on the cog goes straight to the system settings.
 
 ## Development
 

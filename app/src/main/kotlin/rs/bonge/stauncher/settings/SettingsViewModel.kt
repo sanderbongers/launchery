@@ -16,6 +16,10 @@ import rs.bonge.stauncher.apps.InstalledApp
 import rs.bonge.stauncher.layout.Arranged
 import rs.bonge.stauncher.layout.Layout
 import java.io.IOException
+import java.text.Collator
+
+// The hidden apps are listed to be found by name, not by the slot they came from.
+private val byName = compareBy<InstalledApp, String>(Collator.getInstance()) { it.label }.thenBy { it.packageName }
 
 /** [loaded] tells an empty list from one that has not been read yet. */
 data class SettingsUiState(
@@ -31,7 +35,7 @@ class SettingsViewModel(
 
     val uiState: StateFlow<SettingsUiState> =
         latest
-            .map { SettingsUiState(it?.hidden.orEmpty(), loaded = it != null) }
+            .map { SettingsUiState(it?.hidden.orEmpty().sortedWith(byName), loaded = it != null) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), SettingsUiState())
 
     fun unhide(app: InstalledApp) {

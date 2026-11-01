@@ -5,12 +5,12 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import rs.bonge.stauncher.apps.InstalledApp
 import rs.bonge.stauncher.home.HomeCallbacks
 import rs.bonge.stauncher.home.HomeScreen
@@ -19,12 +19,15 @@ import rs.bonge.stauncher.settings.SettingsActivity
 
 class HomeActivity : ComponentActivity() {
     private val container get() = (application as StauncherApplication).container
+    private val viewModel by viewModels<HomeViewModel> { HomeViewModel.Factory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val viewModel = viewModel<HomeViewModel>(factory = HomeViewModel.Factory)
             val state by viewModel.uiState.collectAsStateWithLifecycle()
+            val time by container.clock.time.collectAsStateWithLifecycle(
+                initialValue = remember { container.clock.now() },
+            )
             // An open panel or a picked-up app should not still be there when the user comes back.
             LifecycleEventEffect(Lifecycle.Event.ON_STOP, onEvent = viewModel::dismiss)
             val callbacks =
@@ -61,8 +64,14 @@ class HomeActivity : ComponentActivity() {
                         },
                     )
                 }
-            HomeScreen(state = state, bannerLoader = container.bannerLoader, callbacks = callbacks)
+            HomeScreen(state = state, time = time, bannerLoader = container.bannerLoader, callbacks = callbacks)
         }
+    }
+
+    // The Home button reaches an already running Stauncher here, and so does a launch from the stock launcher.
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        viewModel.goHome()
     }
 
     private fun launch(app: InstalledApp) {

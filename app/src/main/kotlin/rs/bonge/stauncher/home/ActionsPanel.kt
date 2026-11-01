@@ -58,8 +58,9 @@ private val ActionCornerRadius = 8.dp
 private val ActionFocusBorderWidth = 3.dp
 
 /**
- * The actions for one app, centred over the home screen. Focus stays inside it until it closes. Uninstall is offered
- * only for apps the user installed, and Move only when there is another app to swap places with.
+ * The actions for one app, centred over the home screen. Focus stays inside it until it closes. App info comes first
+ * because Force stop, which only the system can do, is one step further in. Uninstall is offered only for apps the
+ * user installed, and Move only when there is another app to swap places with.
  */
 @Composable
 fun ActionsPanel(
@@ -106,9 +107,9 @@ fun ActionsPanel(
             Spacer(Modifier.height(8.dp))
             val actions =
                 buildList {
+                    add(stringResource(R.string.action_app_info) to onAppInfo)
                     if (canMove) add(stringResource(R.string.action_move) to onMove)
                     add(stringResource(R.string.action_hide) to onHide)
-                    add(stringResource(R.string.action_app_info) to onAppInfo)
                     if (!app.system) add(stringResource(R.string.action_uninstall) to onUninstall)
                 }
             actions.forEachIndexed { index, (text, onClick) ->

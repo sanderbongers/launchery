@@ -14,6 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
@@ -37,14 +40,38 @@ class HomeCallbacks(
     val onOpenSystemSettings: () -> Unit,
 )
 
+/** The keys in the primary colour, so that they stand out from what they do. */
+@Composable
+private fun MoveHint(modifier: Modifier = Modifier) {
+    val keyColor = colorResource(R.color.text_primary)
+    val labelColor = colorResource(R.color.text_secondary)
+    val steps =
+        listOf(
+            stringResource(R.string.hint_key_move) to stringResource(R.string.hint_label_move),
+            stringResource(R.string.hint_key_place) to stringResource(R.string.hint_label_place),
+            stringResource(R.string.hint_key_cancel) to stringResource(R.string.hint_label_cancel),
+        )
+    val text =
+        buildAnnotatedString {
+            steps.forEachIndexed { index, (key, label) ->
+                if (index > 0) withStyle(SpanStyle(color = labelColor)) { append(" · ") }
+                withStyle(SpanStyle(color = keyColor)) { append(key) }
+                withStyle(SpanStyle(color = labelColor)) { append(" $label") }
+            }
+        }
+    Text(text = text, fontSize = 16.sp, modifier = modifier)
+}
+
 @Composable
 fun HomeScreen(
     state: HomeUiState,
+    time: String,
     bannerLoader: BannerLoader,
     callbacks: HomeCallbacks,
     modifier: Modifier = Modifier,
 ) {
-    BackHandler(enabled = state.mode != HomeMode.Browsing, onBack = callbacks.onDismiss)
+    // Back puts away what is open, and otherwise does nothing: there is nowhere further back than the home screen.
+    BackHandler { if (state.mode != HomeMode.Browsing) callbacks.onDismiss() }
 
     // With no app to focus, the settings button is the way in, so it takes focus.
     val settingsFocus = remember { FocusRequester() }
@@ -53,9 +80,11 @@ fun HomeScreen(
 
     Box(modifier = modifier.fillMaxSize().background(colorResource(R.color.background))) {
         TopBar(
+            time = time,
             onOpenSettings = callbacks.onOpenSettings,
             onOpenSystemSettings = callbacks.onOpenSystemSettings,
             settingsFocus = settingsFocus,
+            focusable = state.loaded,
             modifier = Modifier.align(Alignment.TopCenter),
         )
         if (rowEmpty) {
@@ -69,6 +98,7 @@ fun HomeScreen(
             AppRow(
                 apps = state.apps,
                 mode = state.mode,
+                homeRequests = state.homeRequests,
                 bannerLoader = bannerLoader,
                 onLaunch = callbacks.onLaunch,
                 onOpenActions = callbacks.onOpenActions,
@@ -78,12 +108,7 @@ fun HomeScreen(
             )
         }
         if (state.mode is HomeMode.Moving) {
-            Text(
-                text = stringResource(R.string.move_hint),
-                color = colorResource(R.color.text_secondary),
-                fontSize = 16.sp,
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 48.dp),
-            )
+            MoveHint(Modifier.align(Alignment.BottomCenter).padding(bottom = 48.dp))
         }
         (state.mode as? HomeMode.Actions)?.let { actions ->
             ActionsPanel(

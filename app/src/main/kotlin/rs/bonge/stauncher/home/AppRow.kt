@@ -27,8 +27,11 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.offset
 import rs.bonge.stauncher.apps.BannerLoader
 import rs.bonge.stauncher.apps.InstalledApp
 
@@ -37,6 +40,11 @@ private val CardSpacing = 16.dp
 
 // Room for the focused card's scale and border, which the row would otherwise clip.
 private val RowVerticalPadding = 16.dp
+
+// Moving a card makes the row jump a place, and only the cards that were composed before can slide to their new
+// places. So the row is laid out this much wider on both sides of the screen, and the card that slides into view or out
+// of it is already there.
+private val SlideMargin = CardWidth + CardSpacing
 
 /** Which app had focus last. Plain fields, so that reading them in composition does not subscribe to them. */
 private class FocusTracker {
@@ -47,15 +55,16 @@ private class FocusTracker {
 }
 
 /**
- * The home row. Left from the first app and right from the last wrap around, on a fresh key press only. When the
- * focused app disappears, focus moves to the app that takes its index. While an app is being moved ([mode]) the keys
- * move it instead, and select drops it.
+ * The home row. A left or right key that is held down on the first or the last app breaks through to the other end of
+ * the row. When the focused app disappears, focus moves to the app that takes its index. While an app is being moved
+ * ([mode]) the keys move it instead, and select drops it.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppRow(
     apps: List<InstalledApp>,
     mode: HomeMode,
+    homeRequests: Int,
     bannerLoader: BannerLoader,
     onLaunch: (InstalledApp) -> Unit,
     onOpenActions: (InstalledApp) -> Unit,
@@ -64,8 +73,9 @@ fun AppRow(
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
-    val pivotPx = with(LocalDensity.current) { RowPadding.toPx() }
+    val pivotPx = with(LocalDensity.current) { (SlideMargin + RowPadding).toPx() }
     val tracker = remember { FocusTracker() }
+    val breakThrough = remember { BreakThrough() }
     var pendingFocus by remember { mutableStateOf<Int?>(null) }
 
     // Compose moves focus to another card by itself when the focused card leaves, which would overwrite the tracker
@@ -88,6 +98,15 @@ fun AppRow(
         }
         tracker.actionsWereOpen = actionsOpen
     }
+    // Going home starts the row over. This comes after the effect above, so that its focus target wins when the Home
+    // button closes the actions panel.
+    val handledHomeRequests = remember { intArrayOf(homeRequests) }
+    LaunchedEffect(homeRequests) {
+        if (homeRequests != handledHomeRequests[0]) {
+            handledHomeRequests[0] = homeRequests
+            pendingFocus = 0
+        }
+    }
     // An off-screen target has to be composed before it can take focus.
     LaunchedEffect(pendingFocus) {
         pendingFocus?.let { listState.scrollToItem(it) }
@@ -108,16 +127,14 @@ fun AppRow(
         LazyRow(
             state = listState,
             modifier =
-                modifier.focusRestorer().onPreviewKeyEvent { event ->
+                modifier.extendBeyondScreen(SlideMargin).focusRestorer().onPreviewKeyEvent { event ->
                     if (movingPackage != null) {
                         handleMoveKey(event, onMoveBy, onDrop)
                     } else {
-                        val target = wrapTarget(event, tracker.index, apps.lastIndex)
-                        target?.let { pendingFocus = it }
-                        target != null
+                        breakThrough.handle(event, tracker.index, apps.lastIndex) { pendingFocus = it }
                     }
                 },
-            contentPadding = PaddingValues(horizontal = RowPadding, vertical = RowVerticalPadding),
+            contentPadding = PaddingValues(horizontal = SlideMargin + RowPadding, vertical = RowVerticalPadding),
             horizontalArrangement = Arrangement.spacedBy(CardSpacing),
         ) {
             itemsIndexed(apps, key = { _, app -> app.packageName }) { index, app ->
@@ -134,6 +151,8 @@ fun AppRow(
                     onClick = { onLaunch(app) },
                     onLongClick = { onOpenActions(app) },
                     lifted = app.packageName == movingPackage,
+                    // Only the cards that change place slide: a card that appears or goes simply does so.
+                    itemModifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null),
                     modifier =
                         Modifier
                             .focusRequester(focusRequester)
@@ -149,21 +168,56 @@ fun AppRow(
     }
 }
 
+/** Measures the row [margin] wider on both sides than the space it is placed in, which clips it back to the screen. */
+private fun Modifier.extendBeyondScreen(margin: Dp) =
+    layout { measurable, constraints ->
+        val extra = margin.roundToPx()
+        val placeable = measurable.measure(constraints.offset(horizontal = 2 * extra))
+        layout(placeable.width - 2 * extra, placeable.height) { placeable.place(-extra, 0) }
+    }
+
 /**
- * The index to wrap focus to, or null to leave the key press to normal focus movement. Only a fresh press wraps: the
- * repeats of a held key stop at the end of the row.
+ * Left and right at the ends of the row. A press that starts on the first or the last app does nothing, and held down
+ * until its first repeat it jumps once to the other end, so that a stray press never loops the row. The rest of that
+ * hold is ignored. A key that is held down from further along stops at the end instead, as it has not started there.
  */
-private fun wrapTarget(
-    event: KeyEvent,
-    focusedIndex: Int,
-    lastIndex: Int,
-): Int? {
-    val freshPress = event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0
-    if (!freshPress || lastIndex < 1) return null
-    return when {
-        event.key == Key.DirectionLeft && focusedIndex == 0 -> lastIndex
-        event.key == Key.DirectionRight && focusedIndex == lastIndex -> 0
-        else -> null
+private class BreakThrough {
+    private var key: Key? = null
+    private var jumped = false
+
+    /** Whether the row consumed [event]; if not, the key moves focus as usual. [jumpTo] gets the index to focus. */
+    fun handle(
+        event: KeyEvent,
+        focusedIndex: Int,
+        lastIndex: Int,
+        jumpTo: (Int) -> Unit,
+    ): Boolean {
+        val direction = event.key
+        if (direction != Key.DirectionLeft && direction != Key.DirectionRight) return false
+        return when (event.type) {
+            KeyEventType.KeyDown -> {
+                val repeat = event.nativeKeyEvent.repeatCount
+                if (repeat == 0) {
+                    val atEnd = lastIndex >= 1 && focusedIndex == if (direction == Key.DirectionLeft) 0 else lastIndex
+                    key = direction.takeIf { atEnd }
+                    jumped = false
+                }
+                val startedAtEnd = key == direction
+                if (startedAtEnd && repeat == 1 && !jumped) {
+                    jumped = true
+                    jumpTo(if (direction == Key.DirectionLeft) lastIndex else 0)
+                }
+                startedAtEnd
+            }
+
+            KeyEventType.KeyUp -> {
+                (key == direction).also { if (it) key = null }
+            }
+
+            else -> {
+                false
+            }
+        }
     }
 }
 

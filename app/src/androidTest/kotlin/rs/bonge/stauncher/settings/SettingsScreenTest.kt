@@ -1,19 +1,24 @@
 package rs.bonge.stauncher.settings
 
 import android.os.SystemClock
+import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyPress
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -24,7 +29,7 @@ import android.view.KeyEvent as AndroidKeyEvent
 @RunWith(AndroidJUnit4::class)
 class SettingsScreenTest {
     @get:Rule
-    val rule = createComposeRule()
+    val rule = createAndroidComposeRule<ComponentActivity>()
 
     // The packages do not exist, so no icons load; the rows still show their names.
     private val bannerLoader =
@@ -55,7 +60,7 @@ class SettingsScreenTest {
                     calls += "unhide ${app.label}"
                     state = state.copy(hidden = state.hidden - app)
                 },
-                onOpenSystemSettings = { calls += "system settings" },
+                onOpenSystemSettings = { calls += "all settings" },
             )
         }
         rule.waitForIdle()
@@ -68,13 +73,24 @@ class SettingsScreenTest {
         rule.waitForIdle()
     }
 
+    private fun back() {
+        rule.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }
+        rule.waitForIdle()
+    }
+
+    /** From the main page: down to the Hidden apps row, then select. */
+    private fun openHiddenApps() {
+        press(AndroidKeyEvent.KEYCODE_DPAD_DOWN)
+        press(AndroidKeyEvent.KEYCODE_DPAD_CENTER)
+    }
+
     @Test
-    fun `starts on the system settings link and lists the hidden apps`() {
+    fun `starts on the All settings row with the Hidden apps row below it`() {
         showSettings()
 
-        rule.onNodeWithText("System settings").assertIsFocused()
-        rule.onNodeWithText("App 1").assertIsDisplayed()
-        rule.onNodeWithText("App 3").assertIsDisplayed()
+        rule.onNodeWithText("All settings").assertIsFocused()
+        rule.onNodeWithText("Hidden apps").assertIsDisplayed()
+        assertTrue(rule.onAllNodes(hasText("App 1")).fetchSemanticsNodes().isEmpty())
     }
 
     @Test
@@ -83,13 +99,36 @@ class SettingsScreenTest {
 
         press(AndroidKeyEvent.KEYCODE_DPAD_CENTER)
 
-        assertEquals(listOf("system settings"), calls)
+        assertEquals(listOf("all settings"), calls)
+    }
+
+    @Test
+    fun `opens the list of hidden apps and focuses the first app`() {
+        showSettings()
+
+        openHiddenApps()
+
+        rule.onNodeWithText("App 1").assertIsFocused()
+        rule.onNodeWithText("App 3").assertIsDisplayed()
+        assertTrue(calls.isEmpty())
+    }
+
+    @Test
+    fun `says so when no app is hidden`() {
+        state = state.copy(hidden = emptyList())
+        showSettings()
+
+        openHiddenApps()
+
+        rule.onNodeWithText("No hidden apps").assertIsDisplayed()
+        rule.onAllNodes(isFocused()).assertCountEquals(0)
     }
 
     @Test
     fun `unhides the focused app on select and keeps focus at the same place in the list`() {
         showSettings()
-        repeat(2) { press(AndroidKeyEvent.KEYCODE_DPAD_DOWN) }
+        openHiddenApps()
+        press(AndroidKeyEvent.KEYCODE_DPAD_DOWN)
         rule.onNodeWithText("App 2").assertIsFocused()
 
         press(AndroidKeyEvent.KEYCODE_DPAD_CENTER)
@@ -101,7 +140,8 @@ class SettingsScreenTest {
     @Test
     fun `moves focus up when the last app of the list is unhidden`() {
         showSettings()
-        repeat(3) { press(AndroidKeyEvent.KEYCODE_DPAD_DOWN) }
+        openHiddenApps()
+        repeat(2) { press(AndroidKeyEvent.KEYCODE_DPAD_DOWN) }
         rule.onNodeWithText("App 3").assertIsFocused()
 
         press(AndroidKeyEvent.KEYCODE_DPAD_CENTER)
@@ -110,15 +150,26 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun `moves focus to the system settings link and says so when the last hidden app is unhidden`() {
+    fun `says so when the last hidden app is unhidden`() {
         state = state.copy(hidden = listOf(app(1)))
         showSettings()
-        press(AndroidKeyEvent.KEYCODE_DPAD_DOWN)
+        openHiddenApps()
         rule.onNodeWithText("App 1").assertIsFocused()
 
         press(AndroidKeyEvent.KEYCODE_DPAD_CENTER)
 
         rule.onNodeWithText("No hidden apps").assertIsDisplayed()
-        rule.onNodeWithText("System settings").assertIsFocused()
+    }
+
+    @Test
+    fun `goes back from the list to the main page on the Hidden apps row`() {
+        showSettings()
+        openHiddenApps()
+
+        back()
+
+        rule.onNodeWithText("Hidden apps").assertIsFocused()
+        rule.onNodeWithText("All settings").assertIsDisplayed()
+        assertTrue(rule.onAllNodes(hasText("App 1")).fetchSemanticsNodes().isEmpty())
     }
 }

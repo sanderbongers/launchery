@@ -3,6 +3,7 @@ package rs.bonge.stauncher.home
 import android.os.SystemClock
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -35,6 +36,7 @@ class AppRowTest {
         BannerLoader(InstrumentationRegistry.getInstrumentation().targetContext.packageManager)
 
     private var apps by mutableStateOf(testApps(8))
+    private var homeRequests by mutableIntStateOf(0)
     private val launched = mutableListOf<String>()
 
     private fun testApps(count: Int) =
@@ -56,6 +58,7 @@ class AppRowTest {
             AppRow(
                 apps = apps,
                 mode = HomeMode.Browsing,
+                homeRequests = homeRequests,
                 bannerLoader = bannerLoader,
                 onLaunch = { launched += it.packageName },
                 onOpenActions = {},
@@ -123,35 +126,40 @@ class AppRowTest {
     fun `clamps the scroll at the end of the row`() {
         showRow()
 
-        press(AndroidKeyEvent.KEYCODE_DPAD_LEFT)
+        scrollToLastApp()
 
         assertFocused("App 8")
         // 8 cards of 192 dp with 16 dp gaps and 48 dp padding make a 1744 dp row in a 960 dp viewport.
         rule.onNodeWithContentDescription("App 8").assertLeftPositionInRootIsEqualTo(960.dp - 48.dp - 192.dp)
     }
 
-    @Test
-    fun `wraps from the first app to the last on a fresh left press`() {
-        showRow()
-
-        press(AndroidKeyEvent.KEYCODE_DPAD_LEFT)
-
+    /** Holds right from the first app until the last one has focus; the extra repeat shows that it stops there. */
+    private fun scrollToLastApp() {
+        press(AndroidKeyEvent.KEYCODE_DPAD_RIGHT, repeats = 8)
         assertFocused("App 8")
     }
 
     @Test
-    fun `wraps from the last app to the first on a fresh right press`() {
+    fun `does nothing on a fresh left press at the first app`() {
         showRow()
-        press(AndroidKeyEvent.KEYCODE_DPAD_LEFT)
-        assertFocused("App 8")
 
-        press(AndroidKeyEvent.KEYCODE_DPAD_RIGHT)
+        press(AndroidKeyEvent.KEYCODE_DPAD_LEFT)
 
         assertFocused("App 1")
     }
 
     @Test
-    fun `does not wrap while the key is held`() {
+    fun `does nothing on a fresh right press at the last app`() {
+        showRow()
+        scrollToLastApp()
+
+        press(AndroidKeyEvent.KEYCODE_DPAD_RIGHT)
+
+        assertFocused("App 8")
+    }
+
+    @Test
+    fun `stops at the end when the key is held down from further along`() {
         showRow()
         press(AndroidKeyEvent.KEYCODE_DPAD_RIGHT)
         assertFocused("App 2")
@@ -159,6 +167,60 @@ class AppRowTest {
         press(AndroidKeyEvent.KEYCODE_DPAD_LEFT, repeats = 3)
 
         assertFocused("App 1")
+    }
+
+    @Test
+    fun `breaks through from the first app to the last when left is held there`() {
+        showRow()
+
+        press(AndroidKeyEvent.KEYCODE_DPAD_LEFT, repeats = 1)
+
+        assertFocused("App 8")
+    }
+
+    @Test
+    fun `breaks through from the last app to the first when right is held there`() {
+        showRow()
+        scrollToLastApp()
+
+        press(AndroidKeyEvent.KEYCODE_DPAD_RIGHT, repeats = 1)
+
+        assertFocused("App 1")
+    }
+
+    @Test
+    fun `jumps only once however long the key stays down`() {
+        showRow()
+
+        press(AndroidKeyEvent.KEYCODE_DPAD_LEFT, repeats = 6)
+
+        assertFocused("App 8")
+    }
+
+    @Test
+    fun `needs a new hold to break through again`() {
+        showRow()
+        press(AndroidKeyEvent.KEYCODE_DPAD_LEFT, repeats = 1)
+        assertFocused("App 8")
+
+        press(AndroidKeyEvent.KEYCODE_DPAD_RIGHT)
+        assertFocused("App 8")
+        press(AndroidKeyEvent.KEYCODE_DPAD_RIGHT, repeats = 1)
+
+        assertFocused("App 1")
+    }
+
+    @Test
+    fun `returns to the first app scrolled back to the start when the user goes home`() {
+        showRow()
+        repeat(4) { press(AndroidKeyEvent.KEYCODE_DPAD_RIGHT) }
+        assertFocused("App 5")
+
+        rule.runOnIdle { homeRequests++ }
+        rule.waitForIdle()
+
+        assertFocused("App 1")
+        rule.onNodeWithContentDescription("App 1").assertLeftPositionInRootIsEqualTo(48.dp)
     }
 
     @Test
@@ -186,8 +248,7 @@ class AppRowTest {
     @Test
     fun `moves focus to the new last app when the last app is removed`() {
         showRow()
-        press(AndroidKeyEvent.KEYCODE_DPAD_LEFT)
-        assertFocused("App 8")
+        scrollToLastApp()
 
         rule.runOnIdle { apps = apps.dropLast(1) }
         rule.waitForIdle()

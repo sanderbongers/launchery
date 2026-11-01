@@ -32,7 +32,7 @@ class SettingsActivity : ComponentActivity() {
             Toast
                 .makeText(
                     this,
-                    getString(R.string.launch_failed, getString(R.string.settings)),
+                    getString(R.string.launch_failed, getString(R.string.all_settings)),
                     Toast.LENGTH_SHORT,
                 ).show()
         }

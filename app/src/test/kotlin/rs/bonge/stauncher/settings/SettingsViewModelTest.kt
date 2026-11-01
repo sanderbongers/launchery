@@ -14,6 +14,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import rs.bonge.stauncher.MainDispatcherRule
+import rs.bonge.stauncher.apps.InstalledApp
 import rs.bonge.stauncher.apps.testApp
 import rs.bonge.stauncher.layout.Layout
 import rs.bonge.stauncher.layout.arrangeApps
@@ -29,8 +30,8 @@ class SettingsViewModelTest {
     private val layout = MutableStateFlow(Layout(order = listOf("a", "b"), hidden = setOf("b")))
     private val saved = mutableListOf<Layout>()
 
-    private fun TestScope.viewModel(): SettingsViewModel {
-        val arranged = combine(MutableStateFlow(listOf(a, b)), layout, ::arrangeApps)
+    private fun TestScope.viewModel(apps: List<InstalledApp> = listOf(a, b)): SettingsViewModel {
+        val arranged = combine(MutableStateFlow(apps), layout, ::arrangeApps)
         val viewModel =
             SettingsViewModel(arranged) {
                 saved += it
@@ -47,6 +48,19 @@ class SettingsViewModelTest {
 
             assertTrue(state.loaded)
             assertEquals(listOf(b), state.hidden)
+        }
+
+    @Test
+    fun `lists the hidden apps by name, ignoring case, not by their slot`() =
+        runTest {
+            val beta = testApp("p.1", label = "beta")
+            val alpha = testApp("p.2", label = "Alpha")
+            val zulu = testApp("p.3", label = "Zulu")
+            layout.value = Layout(order = listOf("p.3", "p.1", "p.2"), hidden = setOf("p.1", "p.2", "p.3"))
+
+            val state = viewModel(listOf(beta, alpha, zulu)).uiState.value
+
+            assertEquals(listOf(alpha, beta, zulu), state.hidden)
         }
 
     @Test

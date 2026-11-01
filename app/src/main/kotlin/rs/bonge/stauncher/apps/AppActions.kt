@@ -4,8 +4,11 @@ import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
+
+private const val SYSTEM_PACKAGE = "android"
 
 /** Every action returns false when the system cannot carry it out, so the caller can say so. */
 class AppActions(
@@ -29,6 +32,14 @@ class AppActions(
     fun uninstall(app: InstalledApp): Boolean = start(Intent(Intent.ACTION_DELETE, packageUri(app)))
 
     fun openSystemSettings(): Boolean = start(Intent(Settings.ACTION_SETTINGS))
+
+    /** The package that handles [openSystemSettings], or null when the system names no single handler. */
+    fun systemSettingsPackage(): String? =
+        context.packageManager
+            .resolveActivity(Intent(Settings.ACTION_SETTINGS), PackageManager.MATCH_DEFAULT_ONLY)
+            ?.activityInfo
+            ?.packageName
+            ?.takeIf { it != SYSTEM_PACKAGE } // "android" is the chooser, which stands for several handlers
 
     private fun packageUri(app: InstalledApp) = Uri.fromParts("package", app.packageName, null)
 

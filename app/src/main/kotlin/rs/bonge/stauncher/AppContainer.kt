@@ -13,9 +13,11 @@ import rs.bonge.stauncher.apps.AppRepository
 import rs.bonge.stauncher.apps.BannerLoader
 import rs.bonge.stauncher.apps.PackageChanges
 import rs.bonge.stauncher.layout.Arranged
+import rs.bonge.stauncher.layout.Layout
 import rs.bonge.stauncher.layout.LayoutRepository
 import rs.bonge.stauncher.layout.arrangeApps
 import rs.bonge.stauncher.layout.createLayoutStore
+import rs.bonge.stauncher.time.Clock
 
 /** Builds the app-wide objects once; constructor injection by hand keeps the dependencies visible. */
 class AppContainer(
@@ -27,16 +29,20 @@ class AppContainer(
             selfPackage = application.packageName,
             packageChanges = PackageChanges(application.getSystemService(LauncherApps::class.java)),
         )
+    val appActions = AppActions(application)
+
+    // The settings cog and the settings screen lead to the system Settings, so a new layout starts without its tile.
     val layoutRepository =
         LayoutRepository(
             createLayoutStore(
                 file = application.dataStoreFile("layout.json"),
                 scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+                defaultLayout = { Layout(hidden = setOfNotNull(appActions.systemSettingsPackage())) },
             ),
         )
 
     /** Emits only once both the installed apps and the saved layout are known, so the order never flashes. */
     val arrangedApps: Flow<Arranged> = combine(appRepository.apps, layoutRepository.layout, ::arrangeApps)
     val bannerLoader = BannerLoader(application.packageManager)
-    val appActions = AppActions(application)
+    val clock = Clock(application)
 }

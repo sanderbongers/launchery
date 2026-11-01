@@ -5,10 +5,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
@@ -20,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -41,22 +44,36 @@ private val BarVerticalPadding = 27.dp
 private val ButtonSize = 48.dp
 private val ButtonIconSize = 24.dp
 private val ButtonFocusBorderWidth = 3.dp
+private val ClockGap = 24.dp
 private val LabelAreaHeight = 32.dp
 private val LabelTopGap = 12.dp
 private const val FOCUSED_SCALE = 1.1f
 
-/** The top bar, reached with up from the row. The clock will join the settings button here. */
+/**
+ * The top bar, reached with up from the row: the [time], and the settings button at the far right. While [focusable] is
+ * false nothing in the bar can take focus, so the first focus does not land here before the row has its apps.
+ */
 @Composable
 fun TopBar(
+    time: String,
     onOpenSettings: () -> Unit,
     onOpenSystemSettings: () -> Unit,
     settingsFocus: FocusRequester,
+    focusable: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().padding(horizontal = BarHorizontalPadding, vertical = BarVerticalPadding),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = BarHorizontalPadding, vertical = BarVerticalPadding)
+                .focusProperties { canFocus = focusable },
         horizontalArrangement = Arrangement.End,
     ) {
+        Box(Modifier.height(ButtonSize), contentAlignment = Alignment.Center) {
+            Text(text = time, color = colorResource(R.color.text_secondary), fontSize = 20.sp, maxLines = 1)
+        }
+        Spacer(Modifier.width(ClockGap))
         SettingsButton(onOpenSettings, onOpenSystemSettings, Modifier.focusRequester(settingsFocus))
     }
 }

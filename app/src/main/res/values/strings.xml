@@ -1,15 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Stauncher</string>
     <string name="launch_failed">Can’t open %1$s</string>
     <string name="settings">Settings</string>
-    <string name="system_settings">System settings</string>
+    <string name="all_settings">All settings</string>
     <string name="stauncher_settings">Stauncher settings</string>
     <string name="action_move">Move</string>
     <string name="action_hide">Hide</string>
     <string name="action_app_info">App info</string>
     <string name="action_uninstall">Uninstall</string>
-    <string name="move_hint">◀ ▶ move · OK place · Back cancel</string>
+    <string name="hint_key_move">◀ ▶</string>
+    <string name="hint_label_move">move</string>
+    <string name="hint_key_place">OK</string>
+    <string name="hint_label_place">place</string>
+    <string name="hint_key_cancel">Back</string>
+    <!-- A word in the hint line, not a dialog button, so the standard capitalisation does not apply. -->
+    <string name="hint_label_cancel" tools:ignore="ButtonCase">cancel</string>
     <string name="no_apps">No apps to show</string>
     <string name="no_hidden_apps">No hidden apps</string>
     <string name="hidden_apps">Hidden apps</string>

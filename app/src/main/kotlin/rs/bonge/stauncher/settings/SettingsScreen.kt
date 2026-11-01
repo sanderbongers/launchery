@@ -1,11 +1,13 @@
 package rs.bonge.stauncher.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +24,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,13 +49,17 @@ import rs.bonge.stauncher.home.rememberArt
 private val ScreenHorizontalPadding = 48.dp
 private val ScreenVerticalPadding = 27.dp
 private val RowHeight = 56.dp
+private val RowSpacing = 8.dp
 private val RowCornerRadius = 8.dp
 private val RowIconSize = 40.dp
 private val FocusBorderWidth = 3.dp
 
+private enum class Page { Main, HiddenApps }
+
 /**
- * The settings: a link to the system Settings, and the hidden apps, which select puts back on the home row. After an
- * app is unhidden focus stays at the same place in the list, or moves to the link when the list is empty.
+ * The settings: a main page with a link to the system settings and one to the hidden apps, and the hidden apps page,
+ * where select puts an app back on the home row. Back on the hidden apps page returns to the main page, with focus on
+ * the row that led there.
  */
 @Composable
 fun SettingsScreen(
@@ -62,23 +69,12 @@ fun SettingsScreen(
     onOpenSystemSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val systemSettingsFocus = remember { FocusRequester() }
-    val listState = rememberLazyListState()
-    var unhiddenIndex by remember { mutableStateOf<Int?>(null) }
-    var pendingFocus by remember { mutableStateOf<Int?>(null) }
-
-    LaunchedEffect(Unit) { systemSettingsFocus.requestFocus() }
-    LaunchedEffect(state.hidden) {
-        val index = unhiddenIndex ?: return@LaunchedEffect
-        unhiddenIndex = null
-        if (state.hidden.isEmpty()) {
-            systemSettingsFocus.requestFocus()
-        } else {
-            pendingFocus = index.coerceAtMost(state.hidden.lastIndex)
-        }
+    var page by rememberSaveable { mutableStateOf(Page.Main) }
+    var cameBack by remember { mutableStateOf(false) }
+    BackHandler(enabled = page == Page.HiddenApps) {
+        cameBack = true
+        page = Page.Main
     }
-    // An off-screen target has to be composed before it can take focus.
-    LaunchedEffect(pendingFocus) { pendingFocus?.let { listState.scrollToItem(it) } }
 
     Column(
         modifier =
@@ -87,55 +83,112 @@ fun SettingsScreen(
                 .background(colorResource(R.color.background))
                 .padding(horizontal = ScreenHorizontalPadding, vertical = ScreenVerticalPadding),
     ) {
-        Text(
-            text = stringResource(R.string.stauncher_settings),
-            color = colorResource(R.color.text_primary),
-            fontSize = 28.sp,
-        )
-        Spacer(Modifier.height(24.dp))
-        SettingsRow(onClick = onOpenSystemSettings, modifier = Modifier.focusRequester(systemSettingsFocus)) {
-            Text(
-                text = stringResource(R.string.system_settings),
-                color = colorResource(R.color.text_primary),
-                fontSize = 18.sp,
-            )
-        }
-        Spacer(Modifier.height(24.dp))
-        Text(
-            text = stringResource(R.string.hidden_apps),
-            color = colorResource(R.color.text_secondary),
-            fontSize = 16.sp,
-        )
-        Spacer(Modifier.height(8.dp))
-        if (state.loaded && state.hidden.isEmpty()) {
-            Text(
-                text = stringResource(R.string.no_hidden_apps),
-                color = colorResource(R.color.text_secondary),
-                fontSize = 18.sp,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        }
-        LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            itemsIndexed(state.hidden, key = { _, app -> app.packageName }) { index, app ->
-                val focusRequester = remember { FocusRequester() }
-                if (pendingFocus == index) {
-                    LaunchedEffect(Unit) {
-                        focusRequester.requestFocus()
-                        pendingFocus = null
-                    }
-                }
-                HiddenAppRow(
-                    app = app,
-                    bannerLoader = bannerLoader,
-                    onClick = {
-                        unhiddenIndex = index
-                        onUnhide(app)
+        when (page) {
+            Page.Main -> {
+                MainPage(
+                    focusHiddenApps = cameBack,
+                    onOpenSystemSettings = onOpenSystemSettings,
+                    onOpenHiddenApps = {
+                        cameBack = false
+                        page = Page.HiddenApps
                     },
-                    modifier = Modifier.focusRequester(focusRequester),
                 )
+            }
+
+            Page.HiddenApps -> {
+                HiddenAppsPage(state, bannerLoader, onUnhide)
             }
         }
     }
+}
+
+@Composable
+private fun MainPage(
+    focusHiddenApps: Boolean,
+    onOpenSystemSettings: () -> Unit,
+    onOpenHiddenApps: () -> Unit,
+) {
+    val allSettingsFocus = remember { FocusRequester() }
+    val hiddenAppsFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { (if (focusHiddenApps) hiddenAppsFocus else allSettingsFocus).requestFocus() }
+
+    PageTitle(stringResource(R.string.stauncher_settings))
+    Column(verticalArrangement = Arrangement.spacedBy(RowSpacing)) {
+        SettingsRow(onClick = onOpenSystemSettings, modifier = Modifier.focusRequester(allSettingsFocus)) {
+            RowLabel(stringResource(R.string.all_settings))
+        }
+        SettingsRow(onClick = onOpenHiddenApps, modifier = Modifier.focusRequester(hiddenAppsFocus)) {
+            RowLabel(stringResource(R.string.hidden_apps))
+        }
+    }
+}
+
+/**
+ * After an app is unhidden focus stays at the same place in the list. When the list is empty there is nothing left to
+ * focus, and Back leaves the page.
+ */
+@Composable
+private fun HiddenAppsPage(
+    state: SettingsUiState,
+    bannerLoader: BannerLoader,
+    onUnhide: (InstalledApp) -> Unit,
+) {
+    val listState = rememberLazyListState()
+    var unhiddenIndex by remember { mutableStateOf<Int?>(null) }
+    var pendingFocus by remember { mutableStateOf<Int?>(if (state.hidden.isEmpty()) null else 0) }
+
+    LaunchedEffect(state.hidden) {
+        val index = unhiddenIndex ?: return@LaunchedEffect
+        unhiddenIndex = null
+        if (state.hidden.isNotEmpty()) pendingFocus = index.coerceAtMost(state.hidden.lastIndex)
+    }
+    // An off-screen target has to be composed before it can take focus.
+    LaunchedEffect(pendingFocus) { pendingFocus?.let { listState.scrollToItem(it) } }
+
+    PageTitle(stringResource(R.string.hidden_apps))
+    if (state.loaded && state.hidden.isEmpty()) {
+        Text(
+            text = stringResource(R.string.no_hidden_apps),
+            color = colorResource(R.color.text_secondary),
+            fontSize = 18.sp,
+        )
+    }
+    // The focus border is drawn partly outside the row, and the list clips what falls outside it.
+    LazyColumn(
+        state = listState,
+        contentPadding = PaddingValues(vertical = FocusBorderWidth),
+        verticalArrangement = Arrangement.spacedBy(RowSpacing),
+    ) {
+        itemsIndexed(state.hidden, key = { _, app -> app.packageName }) { index, app ->
+            val focusRequester = remember { FocusRequester() }
+            if (pendingFocus == index) {
+                LaunchedEffect(Unit) {
+                    focusRequester.requestFocus()
+                    pendingFocus = null
+                }
+            }
+            HiddenAppRow(
+                app = app,
+                bannerLoader = bannerLoader,
+                onClick = {
+                    unhiddenIndex = index
+                    onUnhide(app)
+                },
+                modifier = Modifier.focusRequester(focusRequester),
+            )
+        }
+    }
+}
+
+@Composable
+private fun PageTitle(text: String) {
+    Text(text = text, color = colorResource(R.color.text_primary), fontSize = 28.sp)
+    Spacer(Modifier.height(24.dp))
+}
+
+@Composable
+private fun RowLabel(text: String) {
+    Text(text = text, color = colorResource(R.color.text_primary), fontSize = 18.sp)
 }
 
 @Composable

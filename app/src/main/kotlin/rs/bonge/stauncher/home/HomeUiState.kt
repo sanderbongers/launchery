@@ -4,12 +4,14 @@ import rs.bonge.stauncher.apps.InstalledApp
 
 /**
  * [apps] are the visible apps in the order to draw; while an app is being moved this is the preview order. [loaded]
- * tells an empty row from one that has not been read yet.
+ * tells an empty row from one that has not been read yet. [homeRequests] counts the times the user went home, which
+ * the row answers by focusing its first app; the number matters only when it changes.
  */
 data class HomeUiState(
     val apps: List<InstalledApp> = emptyList(),
     val loaded: Boolean = false,
     val mode: HomeMode = HomeMode.Browsing,
+    val homeRequests: Int = 0,
 )
 
 sealed interface HomeMode {

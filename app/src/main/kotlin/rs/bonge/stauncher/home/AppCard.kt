@@ -53,6 +53,8 @@ private val FocusBorderWidth = 3.dp
 /**
  * A banner card shows its name below it while focused. An icon-only card, for an app without a banner, shows its name
  * inside the card at all times. A [lifted] card, one that is being moved, grows a little further than a focused one.
+ * [itemModifier] goes on the outermost layout, where a lazy list reads its item modifiers; [modifier] goes on the
+ * focusable card.
  */
 @Composable
 fun AppCard(
@@ -62,6 +64,7 @@ fun AppCard(
     onLongClick: () -> Unit,
     lifted: Boolean,
     modifier: Modifier = Modifier,
+    itemModifier: Modifier = Modifier,
 ) {
     var focused by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(CardCornerRadius)
@@ -69,7 +72,7 @@ fun AppCard(
 
     Column(
         // A lifted card grows past the gap to its neighbours, so it is drawn over them.
-        modifier = Modifier.width(CardWidth).zIndex(if (lifted) 1f else 0f),
+        modifier = itemModifier.width(CardWidth).zIndex(if (lifted) 1f else 0f),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Surface(

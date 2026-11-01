@@ -20,10 +20,14 @@ class LayoutStoreTest {
     private val file get() = File(folder.root, "layout.json")
 
     // DataStore allows one active store per file, so a store is closed before the file is opened again.
-    private suspend fun <T> withRepository(block: suspend (LayoutRepository) -> T): T {
+    private suspend fun <T> withRepository(
+        defaultLayout: Layout = Layout(),
+        block: suspend (LayoutRepository) -> T,
+    ): T {
         val job = SupervisorJob()
         try {
-            return block(LayoutRepository(createLayoutStore(file, CoroutineScope(job + Dispatchers.IO))))
+            val store = createLayoutStore(file, CoroutineScope(job + Dispatchers.IO), defaultLayout = { defaultLayout })
+            return block(LayoutRepository(store))
         } finally {
             (job as Job).cancelAndJoin()
         }
@@ -33,6 +37,32 @@ class LayoutStoreTest {
     fun `starts with the default layout`() =
         runBlocking {
             withRepository { assertEquals(Layout(), it.layout.first()) }
+        }
+
+    @Test
+    fun `starts with the given default layout when there is no file`() =
+        runBlocking {
+            val default = Layout(hidden = setOf("settings"))
+
+            withRepository(default) { assertEquals(default, it.layout.first()) }
+        }
+
+    @Test
+    fun `gives the given default layout when the file cannot be read`() =
+        runBlocking {
+            val default = Layout(hidden = setOf("settings"))
+            file.writeText("not json")
+
+            withRepository(default) { assertEquals(default, it.layout.first()) }
+        }
+
+    @Test
+    fun `keeps a saved layout instead of the default, so an app unhidden by default stays visible`() =
+        runBlocking {
+            val default = Layout(hidden = setOf("settings"))
+            withRepository(default) { it.save(Layout(order = listOf("settings"))) }
+
+            withRepository(default) { assertEquals(Layout(order = listOf("settings")), it.layout.first()) }
         }
 
     @Test

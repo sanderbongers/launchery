@@ -106,6 +106,45 @@ class HomeViewModelTest {
         }
 
     @Test
+    fun `counts each time the user goes home`() =
+        runTest {
+            val viewModel = viewModel()
+            assertEquals(0, viewModel.uiState.value.homeRequests)
+
+            viewModel.goHome()
+            viewModel.goHome()
+
+            assertEquals(2, viewModel.uiState.value.homeRequests)
+        }
+
+    @Test
+    fun `closes the actions without acting when the user goes home`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.openActions(b)
+
+            viewModel.goHome()
+
+            assertEquals(HomeMode.Browsing, viewModel.uiState.value.mode)
+            assertTrue(saved.isEmpty())
+        }
+
+    @Test
+    fun `puts a picked-up app back without saving when the user goes home`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.openActions(a)
+            viewModel.startMove()
+            viewModel.moveBy(1)
+
+            viewModel.goHome()
+
+            assertEquals(listOf("a", "b", "c"), viewModel.packages())
+            assertEquals(HomeMode.Browsing, viewModel.uiState.value.mode)
+            assertTrue(saved.isEmpty())
+        }
+
+    @Test
     fun `closes the actions when their app disappears`() =
         runTest {
             val viewModel = viewModel()

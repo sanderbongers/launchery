@@ -18,8 +18,10 @@ private val json =
         encodeDefaults = true
     }
 
-internal object LayoutSerializer : Serializer<Layout> {
-    override val defaultValue = Layout()
+internal class LayoutSerializer(
+    private val defaultLayout: () -> Layout,
+) : Serializer<Layout> {
+    override val defaultValue: Layout get() = defaultLayout()
 
     override suspend fun readFrom(input: InputStream): Layout =
         try {
@@ -36,14 +38,18 @@ internal object LayoutSerializer : Serializer<Layout> {
     }
 }
 
-/** A file that cannot be read is replaced by the default layout, which orders apps by install date. */
+/**
+ * A file that does not exist yet, or cannot be read, gives [defaultLayout]. By default that orders apps by install date.
+ * It is a function so that it runs only when it is needed, on the store's own thread.
+ */
 fun createLayoutStore(
     file: File,
     scope: CoroutineScope,
+    defaultLayout: () -> Layout = { Layout() },
 ): DataStore<Layout> =
     DataStoreFactory.create(
-        serializer = LayoutSerializer,
-        corruptionHandler = ReplaceFileCorruptionHandler { Layout() },
+        serializer = LayoutSerializer(defaultLayout),
+        corruptionHandler = ReplaceFileCorruptionHandler { defaultLayout() },
         scope = scope,
         produceFile = { file },
     )
