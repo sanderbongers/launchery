@@ -4,6 +4,14 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// The release signing config exists only when all three variables are set, so CI and a fresh clone build an unsigned
+// release APK. The keystore file is outside the repository and its password is never written to disk.
+val releaseKeystoreFile = providers.environmentVariable("STAUNCHER_KEYSTORE_FILE")
+val releaseKeyAlias = providers.environmentVariable("STAUNCHER_KEY_ALIAS")
+val releaseKeystorePassword = providers.environmentVariable("STAUNCHER_KEYSTORE_PASSWORD")
+val hasReleaseSigning =
+    releaseKeystoreFile.isPresent && releaseKeyAlias.isPresent && releaseKeystorePassword.isPresent
+
 android {
     namespace = "rs.bonge.stauncher"
     compileSdk {
@@ -19,11 +27,26 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = File(releaseKeystoreFile.get())
+                storePassword = releaseKeystorePassword.get()
+                keyAlias = releaseKeyAlias.get()
+                keyPassword = releaseKeystorePassword.get()
+                enableV3Signing = true
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         // A second, user-installed app for trying Uninstall and live package updates on the emulator. Install it
         // with adb only; it is never part of a release.
@@ -63,6 +86,7 @@ dependencies {
     implementation(libs.androidx.datastore)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.profileinstaller)
     implementation(libs.androidx.tv.material)
     implementation(libs.kotlinx.serialization.json)
 
