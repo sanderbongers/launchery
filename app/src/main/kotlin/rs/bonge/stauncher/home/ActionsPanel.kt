@@ -1,6 +1,5 @@
 package rs.bonge.stauncher.home
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
@@ -28,7 +27,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -41,13 +39,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Border
-import androidx.tv.material3.ClickableSurfaceDefaults
-import androidx.tv.material3.Surface
+import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import rs.bonge.stauncher.R
 import rs.bonge.stauncher.apps.BannerLoader
 import rs.bonge.stauncher.apps.InstalledApp
+import rs.bonge.stauncher.ui.FocusStyle
+import rs.bonge.stauncher.ui.FocusSurface
 
 private val PanelWidth = 360.dp
 private val PanelPadding = 24.dp
@@ -55,7 +53,6 @@ private val PanelCornerRadius = 16.dp
 private val TitleIconSize = 48.dp
 private val ActionHeight = 48.dp
 private val ActionCornerRadius = 8.dp
-private val ActionFocusBorderWidth = 3.dp
 
 /**
  * The actions for one app, centred over the home screen. Focus stays inside it until it closes. App info comes first
@@ -84,7 +81,7 @@ fun ActionsPanel(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(colorResource(R.color.scrim))
+                .background(MaterialTheme.colorScheme.scrim)
                 .onPreviewKeyEvent { event ->
                     if (!event.isSelect()) return@onPreviewKeyEvent false
                     if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0) armed = true
@@ -136,7 +133,7 @@ private fun Title(
         }
         Text(
             text = app.label,
-            color = colorResource(R.color.text_primary),
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 22.sp,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -151,26 +148,14 @@ private fun ActionItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(ActionCornerRadius)
-    val surfaceColor = colorResource(R.color.card_surface)
-    Surface(
+    FocusSurface(
         onClick = onClick,
+        shape = RoundedCornerShape(ActionCornerRadius),
+        style = FocusStyle.Fill,
         modifier = modifier.fillMaxWidth().height(ActionHeight),
-        shape = ClickableSurfaceDefaults.shape(shape),
-        colors =
-            ClickableSurfaceDefaults.colors(
-                containerColor = surfaceColor,
-                focusedContainerColor = surfaceColor,
-                pressedContainerColor = surfaceColor,
-            ),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
-        border =
-            ClickableSurfaceDefaults.border(
-                focusedBorder = Border(BorderStroke(ActionFocusBorderWidth, Color.White), shape = shape),
-            ),
     ) {
         Box(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentAlignment = Alignment.CenterStart) {
-            Text(text = text, color = colorResource(R.color.text_primary), fontSize = 18.sp)
+            Text(text = text, fontSize = 18.sp)
         }
     }
 }

@@ -1,6 +1,5 @@
 package rs.bonge.stauncher.home
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,12 +18,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -32,23 +29,21 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import androidx.tv.material3.Border
-import androidx.tv.material3.ClickableSurfaceDefaults
-import androidx.tv.material3.Surface
+import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import rs.bonge.stauncher.R
 import rs.bonge.stauncher.apps.BannerLoader
 import rs.bonge.stauncher.apps.InstalledApp
+import rs.bonge.stauncher.ui.FocusStyle
+import rs.bonge.stauncher.ui.FocusSurface
 
 internal val CardWidth = 192.dp
 internal val CardHeight = 108.dp
-private val CardCornerRadius = 8.dp
+private val CardCornerRadius = 12.dp
 private val IconSize = 48.dp
 private val LabelAreaHeight = 32.dp
 private val LabelTopGap = 12.dp
 private const val FOCUSED_SCALE = 1.1f
 private const val LIFTED_SCALE = 1.2f
-private val FocusBorderWidth = 3.dp
 
 /**
  * A banner card shows its name below it while focused. An icon-only card, for an app without a banner, shows its name
@@ -67,34 +62,23 @@ fun AppCard(
     itemModifier: Modifier = Modifier,
 ) {
     var focused by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(CardCornerRadius)
-    val surfaceColor = colorResource(R.color.card_surface)
 
     Column(
         // A lifted card grows past the gap to its neighbours, so it is drawn over them.
         modifier = itemModifier.width(CardWidth).zIndex(if (lifted) 1f else 0f),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Surface(
+        FocusSurface(
             onClick = onClick,
             onLongClick = onLongClick,
+            shape = RoundedCornerShape(CardCornerRadius),
+            style = FocusStyle.Ring,
             modifier =
                 modifier
                     .size(CardWidth, CardHeight)
                     .onFocusChanged { focused = it.isFocused }
                     .semantics { contentDescription = app.label },
-            shape = ClickableSurfaceDefaults.shape(shape),
-            colors =
-                ClickableSurfaceDefaults.colors(
-                    containerColor = surfaceColor,
-                    focusedContainerColor = surfaceColor,
-                    pressedContainerColor = surfaceColor,
-                ),
-            scale = ClickableSurfaceDefaults.scale(focusedScale = if (lifted) LIFTED_SCALE else FOCUSED_SCALE),
-            border =
-                ClickableSurfaceDefaults.border(
-                    focusedBorder = Border(BorderStroke(FocusBorderWidth, Color.White), shape = shape),
-                ),
+            focusedScale = if (lifted) LIFTED_SCALE else FOCUSED_SCALE,
         ) {
             if (app.hasBanner) {
                 BannerArt(app, bannerLoader)
@@ -109,7 +93,7 @@ fun AppCard(
             if (app.hasBanner && focused) {
                 Text(
                     text = app.label,
-                    color = colorResource(R.color.text_primary),
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 14.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -155,7 +139,7 @@ private fun IconAndName(
         }
         Text(
             text = app.label,
-            color = colorResource(R.color.text_primary),
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 14.sp,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,

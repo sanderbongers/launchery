@@ -12,13 +12,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import rs.bonge.stauncher.R
 import rs.bonge.stauncher.apps.BannerLoader
@@ -43,8 +43,8 @@ class HomeCallbacks(
 /** The keys in the primary colour, so that they stand out from what they do. */
 @Composable
 private fun MoveHint(modifier: Modifier = Modifier) {
-    val keyColor = colorResource(R.color.text_primary)
-    val labelColor = colorResource(R.color.text_secondary)
+    val keyColor = MaterialTheme.colorScheme.onSurface
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val steps =
         listOf(
             stringResource(R.string.hint_key_move) to stringResource(R.string.hint_label_move),
@@ -78,7 +78,7 @@ fun HomeScreen(
     val rowEmpty = state.loaded && state.apps.isEmpty()
     LaunchedEffect(rowEmpty) { if (rowEmpty) settingsFocus.requestFocus() }
 
-    Box(modifier = modifier.fillMaxSize().background(colorResource(R.color.background))) {
+    Box(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         TopBar(
             time = time,
             onOpenSettings = callbacks.onOpenSettings,
@@ -90,7 +90,7 @@ fun HomeScreen(
         if (rowEmpty) {
             Text(
                 text = stringResource(R.string.no_apps),
-                color = colorResource(R.color.text_secondary),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 20.sp,
                 modifier = Modifier.align(Alignment.Center),
             )

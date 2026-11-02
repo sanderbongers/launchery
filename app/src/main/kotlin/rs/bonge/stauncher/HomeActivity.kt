@@ -16,6 +16,7 @@ import rs.bonge.stauncher.home.HomeCallbacks
 import rs.bonge.stauncher.home.HomeScreen
 import rs.bonge.stauncher.home.HomeViewModel
 import rs.bonge.stauncher.settings.SettingsActivity
+import rs.bonge.stauncher.ui.StauncherTheme
 
 class HomeActivity : ComponentActivity() {
     private val container get() = (application as StauncherApplication).container
@@ -64,7 +65,9 @@ class HomeActivity : ComponentActivity() {
                         },
                     )
                 }
-            HomeScreen(state = state, time = time, bannerLoader = container.bannerLoader, callbacks = callbacks)
+            StauncherTheme {
+                HomeScreen(state = state, time = time, bannerLoader = container.bannerLoader, callbacks = callbacks)
+            }
         }
     }
 

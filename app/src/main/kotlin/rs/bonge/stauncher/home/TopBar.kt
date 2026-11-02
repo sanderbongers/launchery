@@ -1,6 +1,5 @@
 package rs.bonge.stauncher.home
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,25 +24,23 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Border
-import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Icon
-import androidx.tv.material3.Surface
+import androidx.tv.material3.LocalContentColor
+import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import rs.bonge.stauncher.R
+import rs.bonge.stauncher.ui.FocusStyle
+import rs.bonge.stauncher.ui.FocusSurface
 
 private val BarHorizontalPadding = 48.dp
 private val BarVerticalPadding = 27.dp
 private val ButtonSize = 48.dp
 private val ButtonIconSize = 24.dp
-private val ButtonFocusBorderWidth = 3.dp
 private val ClockGap = 24.dp
 private val LabelAreaHeight = 32.dp
 private val LabelTopGap = 12.dp
@@ -71,7 +68,7 @@ fun TopBar(
         horizontalArrangement = Arrangement.End,
     ) {
         Box(Modifier.height(ButtonSize), contentAlignment = Alignment.Center) {
-            Text(text = time, color = colorResource(R.color.text_secondary), fontSize = 20.sp, maxLines = 1)
+            Text(text = time, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 20.sp, maxLines = 1)
         }
         Spacer(Modifier.width(ClockGap))
         SettingsButton(onOpenSettings, onOpenSystemSettings, Modifier.focusRequester(settingsFocus))
@@ -89,37 +86,27 @@ private fun SettingsButton(
     modifier: Modifier = Modifier,
 ) {
     var focused by remember { mutableStateOf(false) }
-    val surfaceColor = colorResource(R.color.card_surface)
     val label = stringResource(R.string.settings)
 
     Column(horizontalAlignment = Alignment.End) {
-        Surface(
+        FocusSurface(
             onClick = onOpenSettings,
             onLongClick = onOpenSystemSettings,
+            shape = CircleShape,
+            style = FocusStyle.Fill,
             modifier =
                 modifier
                     .size(ButtonSize)
                     .onFocusChanged { focused = it.isFocused }
                     .semantics { contentDescription = label },
-            shape = ClickableSurfaceDefaults.shape(CircleShape),
-            colors =
-                ClickableSurfaceDefaults.colors(
-                    containerColor = surfaceColor,
-                    focusedContainerColor = surfaceColor,
-                    pressedContainerColor = surfaceColor,
-                ),
-            scale = ClickableSurfaceDefaults.scale(focusedScale = FOCUSED_SCALE),
-            border =
-                ClickableSurfaceDefaults.border(
-                    focusedBorder = Border(BorderStroke(ButtonFocusBorderWidth, Color.White), shape = CircleShape),
-                ),
+            focusedScale = FOCUSED_SCALE,
         ) {
             Box(Modifier.size(ButtonSize), contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Filled.Settings,
                     contentDescription = null,
                     modifier = Modifier.size(ButtonIconSize),
-                    tint = colorResource(if (focused) R.color.text_primary else R.color.text_secondary),
+                    tint = if (focused) LocalContentColor.current else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -128,7 +115,7 @@ private fun SettingsButton(
             contentAlignment = Alignment.TopEnd,
         ) {
             if (focused) {
-                Text(text = label, color = colorResource(R.color.text_primary), fontSize = 14.sp, maxLines = 1)
+                Text(text = label, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, maxLines = 1)
             }
         }
     }

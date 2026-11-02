@@ -9,6 +9,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import rs.bonge.stauncher.R
 import rs.bonge.stauncher.StauncherApplication
+import rs.bonge.stauncher.ui.StauncherTheme
 
 class SettingsActivity : ComponentActivity() {
     private val container get() = (application as StauncherApplication).container
@@ -18,12 +19,14 @@ class SettingsActivity : ComponentActivity() {
         setContent {
             val viewModel = viewModel<SettingsViewModel>(factory = SettingsViewModel.Factory)
             val state by viewModel.uiState.collectAsStateWithLifecycle()
-            SettingsScreen(
-                state = state,
-                bannerLoader = container.bannerLoader,
-                onUnhide = viewModel::unhide,
-                onOpenSystemSettings = ::openSystemSettings,
-            )
+            StauncherTheme {
+                SettingsScreen(
+                    state = state,
+                    bannerLoader = container.bannerLoader,
+                    onUnhide = viewModel::unhide,
+                    onOpenSystemSettings = ::openSystemSettings,
+                )
+            }
         }
     }
 
