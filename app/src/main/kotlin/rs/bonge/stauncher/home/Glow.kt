@@ -22,9 +22,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.createBitmap
-import rs.bonge.stauncher.apps.ArtKind
-import rs.bonge.stauncher.apps.InstalledApp
-import rs.bonge.stauncher.settings.AppStyle
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 
@@ -62,17 +59,6 @@ private fun glowOpacityAt(distance: Float): Float {
     val (to, toOpacity) = GlowProfile[next]
     return fromOpacity + (toOpacity - fromOpacity) * (distance - from) / (to - from)
 }
-
-/** What the loader draws for [app] in [style]; the glow takes its colour from the same art. */
-internal fun artKindFor(
-    app: InstalledApp,
-    style: AppStyle,
-): ArtKind =
-    when {
-        style == AppStyle.RoundIcons -> ArtKind.RoundIcon
-        app.hasBanner -> ArtKind.Banner
-        else -> ArtKind.Icon
-    }
 
 /**
  * The soft light of the focused app's colour behind the row: its [center] on the screen and its colour, which fades from

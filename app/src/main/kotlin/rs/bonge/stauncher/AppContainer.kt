@@ -16,7 +16,6 @@ import rs.bonge.stauncher.layout.Arranged
 import rs.bonge.stauncher.layout.Layout
 import rs.bonge.stauncher.layout.LayoutRepository
 import rs.bonge.stauncher.layout.arrangeApps
-import rs.bonge.stauncher.layout.createLayoutStore
 import rs.bonge.stauncher.settings.SettingsRepository
 import rs.bonge.stauncher.settings.UserSettings
 import rs.bonge.stauncher.storage.createJsonStore
@@ -35,14 +34,12 @@ class AppContainer(
     val appActions = AppActions(application)
     private val storeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    // The settings cog and the settings screen lead to the system Settings, so a new layout starts without its tile.
+    // The settings cog and the settings sheet lead to the system Settings, so a new layout starts without its tile.
     val layoutRepository =
         LayoutRepository(
-            createLayoutStore(
-                file = application.dataStoreFile("layout.json"),
-                scope = storeScope,
-                defaultLayout = { Layout(hidden = setOfNotNull(appActions.systemSettingsPackage())) },
-            ),
+            createJsonStore(application.dataStoreFile("layout.json"), storeScope, Layout.serializer()) {
+                Layout(hidden = setOfNotNull(appActions.systemSettingsPackage()))
+            },
         )
     val settingsRepository =
         SettingsRepository(

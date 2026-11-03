@@ -28,10 +28,11 @@ class HomeActivity : ComponentActivity() {
             val time by container.clock.time.collectAsStateWithLifecycle(
                 initialValue = remember { container.clock.now() },
             )
-            // An open panel or a picked-up app should not still be there when the user comes back.
+            // An open screen or sheet, or a picked-up app, should not still be there when the user comes back.
             LifecycleEventEffect(Lifecycle.Event.ON_STOP, onEvent = viewModel::dismiss)
             val callbacks =
                 remember(viewModel) {
+                    val actions = container.appActions
                     HomeCallbacks(
                         onLaunch = ::launch,
                         onOpenActions = viewModel::openActions,
@@ -41,28 +42,16 @@ class HomeActivity : ComponentActivity() {
                         onDrop = viewModel::drop,
                         onHide = viewModel::hide,
                         onAppInfo = { app ->
-                            viewModel.dismiss()
-                            if (!container.appActions.showAppInfo(
-                                    app,
-                                )
-                            ) {
-                                reportFailure(getString(R.string.action_app_info))
-                            }
+                            if (!actions.showAppInfo(app)) reportFailure(getString(R.string.action_app_info))
                         },
                         onUninstall = { app ->
-                            viewModel.dismiss()
-                            if (!container.appActions.uninstall(
-                                    app,
-                                )
-                            ) {
-                                reportFailure(getString(R.string.action_uninstall))
-                            }
+                            if (!actions.uninstall(app)) reportFailure(getString(R.string.action_uninstall))
                         },
                         onOpenSettings = viewModel::openSettings,
                         onToggleAppStyle = viewModel::toggleAppStyle,
                         onUnhide = viewModel::unhide,
                         onOpenSystemSettings = {
-                            if (!container.appActions.openSystemSettings()) reportFailure(getString(R.string.settings))
+                            if (!actions.openSystemSettings()) reportFailure(getString(R.string.settings))
                         },
                     )
                 }

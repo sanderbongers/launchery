@@ -19,10 +19,6 @@ import rs.bonge.stauncher.layout.Arranged
 import rs.bonge.stauncher.layout.Layout
 import rs.bonge.stauncher.settings.AppStyle
 import java.io.IOException
-import java.text.Collator
-
-// The hidden apps are listed to be found by name, not by the slot they came from.
-private val byName = compareBy<InstalledApp, String>(Collator.getInstance()) { it.label }.thenBy { it.packageName }
 
 class HomeViewModel(
     arranged: Flow<Arranged>,
@@ -81,7 +77,6 @@ class HomeViewModel(
         save(arranged.layoutAfterUnhiding(app.packageName))
     }
 
-    /** Switches to the other style. The store makes the update atomic, so two quick presses flip it twice. */
     fun toggleAppStyle() {
         viewModelScope.launch {
             try {
@@ -158,7 +153,7 @@ class HomeViewModel(
             } else {
                 visible
             }
-        return HomeUiState(apps, true, mode, homeRequests, appStyle, arranged.hidden.sortedWith(byName))
+        return HomeUiState(apps, true, mode, homeRequests, appStyle, arranged.hidden)
     }
 
     // An app that arrived during the move is not in the preview order yet, so it goes to the end.

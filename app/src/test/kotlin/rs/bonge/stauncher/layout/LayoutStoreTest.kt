@@ -11,6 +11,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import rs.bonge.stauncher.storage.createJsonStore
 import java.io.File
 
 class LayoutStoreTest {
@@ -26,7 +27,8 @@ class LayoutStoreTest {
     ): T {
         val job = SupervisorJob()
         try {
-            val store = createLayoutStore(file, CoroutineScope(job + Dispatchers.IO), defaultLayout = { defaultLayout })
+            val store =
+                createJsonStore(file, CoroutineScope(job + Dispatchers.IO), Layout.serializer()) { defaultLayout }
             return block(LayoutRepository(store))
         } finally {
             (job as Job).cancelAndJoin()
@@ -34,24 +36,9 @@ class LayoutStoreTest {
     }
 
     @Test
-    fun `starts with the default layout`() =
-        runBlocking {
-            withRepository { assertEquals(Layout(), it.layout.first()) }
-        }
-
-    @Test
     fun `starts with the given default layout when there is no file`() =
         runBlocking {
             val default = Layout(hidden = setOf("settings"))
-
-            withRepository(default) { assertEquals(default, it.layout.first()) }
-        }
-
-    @Test
-    fun `gives the given default layout when the file cannot be read`() =
-        runBlocking {
-            val default = Layout(hidden = setOf("settings"))
-            file.writeText("not json")
 
             withRepository(default) { assertEquals(default, it.layout.first()) }
         }
@@ -76,12 +63,13 @@ class LayoutStoreTest {
         }
 
     @Test
-    fun `falls back to the default layout when the file cannot be read`() =
+    fun `falls back to the given default layout when the file cannot be read`() =
         runBlocking {
+            val default = Layout(hidden = setOf("settings"))
             file.writeText("not json")
 
-            withRepository {
-                assertEquals(Layout(), it.layout.first())
+            withRepository(default) {
+                assertEquals(default, it.layout.first())
                 // The unreadable file was replaced, so saving works again.
                 it.save(Layout(order = listOf("a")))
             }

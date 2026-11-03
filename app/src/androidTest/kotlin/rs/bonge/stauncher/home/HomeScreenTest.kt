@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,25 +32,21 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import rs.bonge.stauncher.apps.BannerLoader
-import rs.bonge.stauncher.apps.InstalledApp
 import rs.bonge.stauncher.layout.Arranged
 import rs.bonge.stauncher.layout.Layout
 import rs.bonge.stauncher.layout.arrangeApps
 import rs.bonge.stauncher.settings.AppStyle
 import android.view.KeyEvent as AndroidKeyEvent
 
-/** The home screen with the real view model on fake data: the row, the actions panel, move mode and the top bar. */
+/** The home screen with the real view model on fake data: the row, the actions screen, move mode and the top bar. */
 @RunWith(AndroidJUnit4::class)
 class HomeScreenTest {
     @get:Rule
     val rule = createAndroidComposeRule<ComponentActivity>()
 
-    // The packages do not exist, so no art loads and the cards are empty.
-    private val bannerLoader =
-        BannerLoader(InstrumentationRegistry.getInstrumentation().targetContext.packageManager)
+    private val bannerLoader = testBannerLoader()
 
-    private val installed = MutableStateFlow(testApps(5))
+    private val installed = MutableStateFlow(homeApps(5))
     private val layout = MutableStateFlow(Layout())
 
     // The banner cards are wider than the round icons, so the tests that slide cards at the edge of the screen use them.
@@ -61,19 +56,7 @@ class HomeScreenTest {
     private lateinit var viewModel: HomeViewModel
 
     // App 2 is a system app, so it gets no Uninstall.
-    private fun testApps(count: Int) =
-        (1..count).map {
-            InstalledApp(
-                packageName = "test.app$it",
-                className = "test.app$it.Main",
-                label = "App $it",
-                leanback = true,
-                hasBanner = false,
-                system = it == 2,
-                firstInstallTime = it.toLong(),
-                lastUpdateTime = it.toLong(),
-            )
-        }
+    private fun homeApps(count: Int) = (1..count).map { testApp(it, system = it == 2) }
 
     private fun showHome(arranged: Flow<Arranged> = combine(installed, layout, ::arrangeApps)) {
         viewModel =
@@ -97,14 +80,8 @@ class HomeScreenTest {
                     onMoveBy = viewModel::moveBy,
                     onDrop = viewModel::drop,
                     onHide = viewModel::hide,
-                    onAppInfo = {
-                        viewModel.dismiss()
-                        calls += "info ${it.label}"
-                    },
-                    onUninstall = {
-                        viewModel.dismiss()
-                        calls += "uninstall ${it.label}"
-                    },
+                    onAppInfo = { calls += "info ${it.label}" },
+                    onUninstall = { calls += "uninstall ${it.label}" },
                     onOpenSettings = viewModel::openSettings,
                     onToggleAppStyle = viewModel::toggleAppStyle,
                     onUnhide = viewModel::unhide,
@@ -221,7 +198,7 @@ class HomeScreenTest {
     ) = start != null && middle != null && end != null && (middle - start).value * (middle - end).value < 0
 
     @Test
-    fun `opens the actions panel for the focused app on a long press`() {
+    fun `opens the actions screen for the focused app on a long press`() {
         showHome()
 
         openActionsFor(cards = 2)
@@ -255,7 +232,7 @@ class HomeScreenTest {
     }
 
     @Test
-    fun `keeps the panel open when the press that opened it is released`() {
+    fun `keeps the actions screen open when the press that opened it is released`() {
         showHome()
 
         holdSelect()
@@ -268,7 +245,7 @@ class HomeScreenTest {
     }
 
     @Test
-    fun `keeps focus in the panel`() {
+    fun `keeps focus in the actions screen`() {
         showHome()
         longPressSelect()
 
@@ -281,7 +258,7 @@ class HomeScreenTest {
     }
 
     @Test
-    fun `closes the panel with Back and gives focus back to the card`() {
+    fun `closes the actions screen with Back and gives focus back to the card`() {
         showHome()
         openActionsFor(cards = 1)
 
@@ -350,7 +327,7 @@ class HomeScreenTest {
     // every move and its cards slide, including the one that comes into view or leaves it at the right edge.
     @Test
     fun `slides in the card that comes into view at the right edge`() {
-        installed.value = testApps(12)
+        installed.value = homeApps(12)
         showHome()
         pickUpApp(cards = 0)
         repeat(3) { press(AndroidKeyEvent.KEYCODE_DPAD_RIGHT) }
@@ -362,7 +339,7 @@ class HomeScreenTest {
 
     @Test
     fun `slides out the card that leaves the view at the right edge`() {
-        installed.value = testApps(12)
+        installed.value = homeApps(12)
         showHome()
         pickUpApp(cards = 0)
         repeat(6) { press(AndroidKeyEvent.KEYCODE_DPAD_RIGHT) }
@@ -556,7 +533,7 @@ class HomeScreenTest {
     }
 
     @Test
-    fun `closes the actions panel without acting when the user goes home`() {
+    fun `closes the actions screen without acting when the user goes home`() {
         showHome()
         openActionsFor(cards = 2)
 

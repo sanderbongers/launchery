@@ -1,7 +1,6 @@
 package rs.bonge.stauncher.home
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -19,10 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,11 +33,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -68,8 +61,6 @@ private val TileCornerRadius = 12.dp
 private val TileGap = 8.dp
 private val TileIconSlot = 32.dp
 private val TileIconSize = 24.dp
-private val RoundButtonSize = 36.dp
-private val RoundButtonIconSize = 18.dp
 
 // A tile's second line keeps its contrast whether the tile is dark or, focused, light.
 private const val SECONDARY_ALPHA = 0.7f
@@ -78,14 +69,13 @@ private enum class Page { Main, HiddenApps }
 
 /**
  * The settings, as a sheet that floats over the dimmed home screen: a round button for the system settings, which has
- * focus first, a tile for how the apps are shown and one for the hidden apps. Select on the hidden apps tile opens a page of the sheet that lists them,
- * where select puts an app back on the row. Back on that page returns to the main page, with focus on the tile that led
- * there. Focus stays in the sheet while it is open.
+ * focus first, a tile for how the apps are shown and one for the hidden apps. Select on the hidden apps tile opens a
+ * page of the sheet that lists them, where select puts an app back on the row. Back on that page returns to the main
+ * page, with focus on the tile that led there. Focus stays in the sheet while it is open.
  */
 @Composable
 fun SettingsSheet(
     hidden: List<InstalledApp>,
-    hiddenLoaded: Boolean,
     appStyle: AppStyle,
     bannerLoader: BannerLoader,
     onToggleAppStyle: () -> Unit,
@@ -134,7 +124,7 @@ fun SettingsSheet(
                 }
 
                 Page.HiddenApps -> {
-                    HiddenAppsPage(hidden, hiddenLoaded, bannerLoader, onUnhide)
+                    HiddenAppsPage(hidden, bannerLoader, onUnhide)
                 }
             }
         }
@@ -187,21 +177,12 @@ private fun AllSettingsButton(
     val label = stringResource(R.string.all_settings)
 
     Column(horizontalAlignment = Alignment.End) {
-        FocusSurface(
-            onClick = onClick,
-            shape = CircleShape,
-            style = FocusStyle.Fill,
+        RoundSettingsButton(
+            label = label,
             containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            modifier =
-                modifier
-                    .size(RoundButtonSize)
-                    .onFocusChanged { focused = it.isFocused }
-                    .semantics { contentDescription = label },
-        ) {
-            Box(Modifier.size(RoundButtonSize), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.Settings, contentDescription = null, modifier = Modifier.size(RoundButtonIconSize))
-            }
-        }
+            onClick = onClick,
+            modifier = modifier.onFocusChanged { focused = it.isFocused },
+        )
         ButtonLabel(text = label, visible = focused, buttonWidth = RoundButtonSize, endAligned = true)
     }
 }
@@ -219,7 +200,6 @@ private fun AppStyle.labelRes() =
 @Composable
 private fun ColumnScope.HiddenAppsPage(
     hidden: List<InstalledApp>,
-    loaded: Boolean,
     bannerLoader: BannerLoader,
     onUnhide: (InstalledApp) -> Unit,
 ) {
@@ -241,7 +221,7 @@ private fun ColumnScope.HiddenAppsPage(
         fontSize = 18.sp,
         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
     )
-    if (loaded && hidden.isEmpty()) {
+    if (hidden.isEmpty()) {
         Text(
             text = stringResource(R.string.no_hidden_apps),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -262,8 +242,6 @@ private fun ColumnScope.HiddenAppsPage(
                     pendingFocus = null
                 }
             }
-            val iconPx = with(LocalDensity.current) { TileIconSlot.roundToPx() }
-            val icon = rememberArt(app, bannerLoader, iconPx, iconPx, ArtKind.Icon)
             SheetTile(
                 label = app.label,
                 value = stringResource(R.string.unhide),
@@ -273,7 +251,7 @@ private fun ColumnScope.HiddenAppsPage(
                 },
                 modifier = Modifier.focusRequester(focusRequester),
             ) {
-                icon?.let { Image(bitmap = it, contentDescription = null, modifier = Modifier.size(TileIconSlot)) }
+                SquareArt(app, bannerLoader, TileIconSlot, ArtKind.Icon)
             }
         }
     }

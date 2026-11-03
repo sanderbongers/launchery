@@ -26,10 +26,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.colorResource
@@ -44,6 +41,7 @@ import androidx.tv.material3.Text
 import rs.bonge.stauncher.R
 import rs.bonge.stauncher.apps.BannerLoader
 import rs.bonge.stauncher.apps.InstalledApp
+import rs.bonge.stauncher.settings.AppStyle
 import rs.bonge.stauncher.ui.FocusStyle
 import rs.bonge.stauncher.ui.FocusSurface
 
@@ -64,9 +62,9 @@ private val FocusedGlow = Glow(elevationColor = Color.Black.copy(alpha = 0.5f), 
 
 /**
  * The actions for one app, on a screen of their own: its banner, as Google TV shows it whatever the row looks like,
- * with its name below, and a column of buttons. Focus stays inside the buttons until the screen closes. App info comes first because Force stop, which
- * only the system can do, is one step further in. Uninstall is offered only for apps the user installed, and Move only
- * when there is another app to swap places with.
+ * with its name below, and a column of buttons. Focus stays inside the buttons until the screen closes. App info comes
+ * first because Force stop, which only the system can do, is one step further in. Uninstall is offered only for apps
+ * the user installed, and Move only when there is another app to swap places with.
  */
 @Composable
 fun ActionsScreen(
@@ -151,11 +149,7 @@ private fun Preview(
             .clip(RoundedCornerShape(PreviewCornerRadius))
             .background(MaterialTheme.colorScheme.surfaceVariant),
     ) {
-        if (app.hasBanner) {
-            BannerArt(app, bannerLoader, PreviewWidth, PreviewHeight)
-        } else {
-            FlatIconArt(app, bannerLoader, PreviewWidth, PreviewHeight)
-        }
+        AppArt(app, bannerLoader, PreviewWidth, PreviewHeight, artKindFor(app, AppStyle.Banners))
     }
 }
 
@@ -179,5 +173,3 @@ private fun ActionButton(
         }
     }
 }
-
-private fun KeyEvent.isSelect() = key == Key.DirectionCenter || key == Key.Enter || key == Key.NumPadEnter

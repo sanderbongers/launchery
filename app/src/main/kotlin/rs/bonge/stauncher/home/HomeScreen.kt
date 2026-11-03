@@ -35,7 +35,10 @@ private val HeadingGap = 11.dp
 class HomeCallbacks(
     val onLaunch: (InstalledApp) -> Unit,
     val onOpenActions: (InstalledApp) -> Unit,
-    /** Back: closes the settings or the actions screen, or puts a picked-up app back. */
+    /**
+     * Closes the settings or the actions screen, or puts a picked-up app back. It runs on Back, and before App info and
+     * Uninstall.
+     */
     val onDismiss: () -> Unit,
     val onStartMove: () -> Unit,
     val onMoveBy: (Int) -> Unit,
@@ -49,7 +52,7 @@ class HomeCallbacks(
     val onOpenSystemSettings: () -> Unit,
 )
 
-/** The keys in the primary colour, so that they stand out from what they do. */
+/** The keys in the text colour and what they do in the muted one, so that the keys stand out. */
 @Composable
 private fun MoveHint(modifier: Modifier = Modifier) {
     val keyColor = MaterialTheme.colorScheme.onSurface
@@ -147,14 +150,19 @@ fun HomeScreen(
                 bannerLoader = bannerLoader,
                 onMove = callbacks.onStartMove,
                 onHide = callbacks.onHide,
-                onAppInfo = { callbacks.onAppInfo(actions.app) },
-                onUninstall = { callbacks.onUninstall(actions.app) },
+                onAppInfo = {
+                    callbacks.onDismiss()
+                    callbacks.onAppInfo(actions.app)
+                },
+                onUninstall = {
+                    callbacks.onDismiss()
+                    callbacks.onUninstall(actions.app)
+                },
             )
         }
         if (settingsOpen) {
             SettingsSheet(
                 hidden = state.hidden,
-                hiddenLoaded = state.loaded,
                 appStyle = state.appStyle,
                 bannerLoader = bannerLoader,
                 onToggleAppStyle = callbacks.onToggleAppStyle,

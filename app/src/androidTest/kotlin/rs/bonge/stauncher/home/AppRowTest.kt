@@ -17,13 +17,10 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyPress
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import rs.bonge.stauncher.apps.BannerLoader
-import rs.bonge.stauncher.apps.InstalledApp
 import rs.bonge.stauncher.settings.AppStyle
 import android.view.KeyEvent as AndroidKeyEvent
 
@@ -32,27 +29,11 @@ class AppRowTest {
     @get:Rule
     val rule = createComposeRule()
 
-    // The packages do not exist, so no art loads and the cards are empty.
-    private val bannerLoader =
-        BannerLoader(InstrumentationRegistry.getInstrumentation().targetContext.packageManager)
+    private val bannerLoader = testBannerLoader()
 
     private var apps by mutableStateOf(testApps(8))
     private var homeRequests by mutableIntStateOf(0)
     private val launched = mutableListOf<String>()
-
-    private fun testApps(count: Int) =
-        (1..count).map {
-            InstalledApp(
-                packageName = "test.app$it",
-                className = "test.app$it.Main",
-                label = "App $it",
-                leanback = true,
-                hasBanner = false,
-                system = false,
-                firstInstallTime = it.toLong(),
-                lastUpdateTime = it.toLong(),
-            )
-        }
 
     // Eight banner cards are wider than the screen, so the scrolling tests use them; the round icons have their own.
     private fun showRow(style: AppStyle = AppStyle.Banners) {

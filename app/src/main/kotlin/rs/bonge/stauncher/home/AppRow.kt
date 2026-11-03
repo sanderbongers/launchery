@@ -42,7 +42,8 @@ import rs.bonge.stauncher.apps.InstalledApp
 import rs.bonge.stauncher.settings.AppStyle
 import rs.bonge.stauncher.ui.ScreenMargin
 
-// Room for the focused card's scale and border, which the row would otherwise clip.
+// Space above and below the cards, which the gap under the heading counts on. It is not room against clipping: a lazy
+// row already lets its items draw 30 dp beyond it across the scroll direction.
 private val RowVerticalPadding = 16.dp
 
 /** Which app had focus last. Plain fields, so that reading them in composition does not subscribe to them. */
@@ -91,9 +92,9 @@ fun AppRow(
     LaunchedEffect(apps) {
         if (focusedAppGone) pendingFocus = refocusIndex
     }
-    // The actions panel takes focus while it is open; when it closes the card gets it back. The panel's app is the one
-    // that had focus. It is noted here, in composition, because the focus that falls back to the first card when the
-    // panel leaves would overwrite the tracker before an effect runs.
+    // The actions screen takes focus while it is open; when it closes the card gets it back. The screen's app is the
+    // one that had focus. It is noted here, in composition, because the focus that falls back to the first card when
+    // the screen leaves would overwrite the tracker before an effect runs.
     val actionsOpen = mode is HomeMode.Actions
     (mode as? HomeMode.Actions)?.let { tracker.restorePackage = it.app.packageName }
     LaunchedEffect(actionsOpen) {
@@ -104,7 +105,7 @@ fun AppRow(
         tracker.actionsWereOpen = actionsOpen
     }
     // Going home starts the row over. This comes after the effect above, so that its focus target wins when the Home
-    // button closes the actions panel.
+    // button closes the actions screen.
     val handledHomeRequests = remember { intArrayOf(homeRequests) }
     LaunchedEffect(homeRequests) {
         if (homeRequests != handledHomeRequests[0]) {
@@ -254,27 +255,13 @@ private fun handleMoveKey(
     onDrop: () -> Unit,
 ): Boolean {
     val down = event.type == KeyEventType.KeyDown
-    return when (event.key) {
-        Key.DirectionLeft -> {
-            true.also { if (down) onMoveBy(-1) }
-        }
-
-        Key.DirectionRight -> {
-            true.also { if (down) onMoveBy(1) }
-        }
-
-        Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
-            true.also { if (down && event.nativeKeyEvent.repeatCount == 0) onDrop() }
-        }
-
-        Key.DirectionUp, Key.DirectionDown -> {
-            true
-        }
-
-        else -> {
-            false
-        }
+    when {
+        event.key == Key.DirectionLeft -> if (down) onMoveBy(-1)
+        event.key == Key.DirectionRight -> if (down) onMoveBy(1)
+        event.isSelect() -> if (down && event.nativeKeyEvent.repeatCount == 0) onDrop()
+        event.key != Key.DirectionUp && event.key != Key.DirectionDown -> return false
     }
+    return true
 }
 
 /** Scrolls just far enough to bring the card fully into view. */

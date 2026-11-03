@@ -17,14 +17,11 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyPress
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import rs.bonge.stauncher.apps.BannerLoader
-import rs.bonge.stauncher.apps.InstalledApp
 import rs.bonge.stauncher.settings.AppStyle
 import android.view.KeyEvent as AndroidKeyEvent
 
@@ -33,23 +30,9 @@ class SettingsSheetTest {
     @get:Rule
     val rule = createAndroidComposeRule<ComponentActivity>()
 
-    // The packages do not exist, so no icons load; the tiles still show their names.
-    private val bannerLoader =
-        BannerLoader(InstrumentationRegistry.getInstrumentation().targetContext.packageManager)
+    private val bannerLoader = testBannerLoader()
 
-    private fun app(number: Int) =
-        InstalledApp(
-            packageName = "test.app$number",
-            className = "test.app$number.Main",
-            label = "App $number",
-            leanback = true,
-            hasBanner = false,
-            system = false,
-            firstInstallTime = number.toLong(),
-            lastUpdateTime = number.toLong(),
-        )
-
-    private var hidden by mutableStateOf((1..3).map(::app))
+    private var hidden by mutableStateOf(testApps(3))
     private var appStyle by mutableStateOf(AppStyle.RoundIcons)
     private val calls = mutableListOf<String>()
 
@@ -58,7 +41,6 @@ class SettingsSheetTest {
         rule.setContent {
             SettingsSheet(
                 hidden = hidden,
-                hiddenLoaded = true,
                 appStyle = appStyle,
                 bannerLoader = bannerLoader,
                 onToggleAppStyle = { calls += "toggle style" },
@@ -178,7 +160,7 @@ class SettingsSheetTest {
 
     @Test
     fun `says so when the last hidden app is unhidden`() {
-        hidden = listOf(app(1))
+        hidden = listOf(testApp(1))
         showSheet()
         openHiddenApps()
         rule.onNodeWithText("App 1").assertIsFocused()

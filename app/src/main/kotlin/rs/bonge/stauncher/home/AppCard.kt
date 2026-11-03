@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.tv.material3.MaterialTheme
@@ -88,10 +89,12 @@ fun AppCard(
 ) {
     var focused by remember { mutableStateOf(false) }
     val round = style == AppStyle.RoundIcons
+    val width = style.itemWidth()
+    val height = if (round) RoundIconSize else BannerHeight
 
     Column(
         // A lifted card grows past the gap to its neighbours, so it is drawn over them.
-        modifier = itemModifier.width(style.itemWidth()).zIndex(if (lifted) 1f else 0f),
+        modifier = itemModifier.width(width).zIndex(if (lifted) 1f else 0f),
         horizontalAlignment = if (round) Alignment.CenterHorizontally else Alignment.Start,
     ) {
         FocusSurface(
@@ -101,16 +104,12 @@ fun AppCard(
             style = FocusStyle.Ring,
             modifier =
                 modifier
-                    .size(style.itemWidth(), if (round) RoundIconSize else BannerHeight)
+                    .size(width, height)
                     .onFocusChanged { focused = it.isFocused }
                     .semantics { contentDescription = app.label },
             focusedScale = if (lifted) LIFTED_SCALE else FOCUSED_SCALE,
         ) {
-            when {
-                round -> RoundIconArt(app, bannerLoader, RoundIconSize)
-                app.hasBanner -> BannerArt(app, bannerLoader, BannerWidth, BannerHeight)
-                else -> FlatIconArt(app, bannerLoader, BannerWidth, BannerHeight)
-            }
+            AppArt(app, bannerLoader, width, height, artKindFor(app, style))
         }
         if (round) RoundLabel(app.label, focused) else BannerLabel(app.label, focused)
     }
@@ -157,21 +156,61 @@ private fun BannerLabel(
     }
 }
 
-/** The round icon of [app], [size] wide and high. */
+/** What the loader draws for [app] in [style]; the glow takes its colour from the same art. */
+internal fun artKindFor(
+    app: InstalledApp,
+    style: AppStyle,
+): ArtKind =
+    when {
+        style == AppStyle.RoundIcons -> ArtKind.RoundIcon
+        app.hasBanner -> ArtKind.Banner
+        else -> ArtKind.Icon
+    }
+
+/**
+ * The art of [app] on a tile of [width] by [height], as [kind] says: a round icon fills the tile, a banner is stretched
+ * over it and a flat icon sits in its middle.
+ */
 @Composable
-internal fun RoundIconArt(
+internal fun AppArt(
+    app: InstalledApp,
+    bannerLoader: BannerLoader,
+    width: Dp,
+    height: Dp,
+    kind: ArtKind,
+) {
+    when (kind) {
+        ArtKind.RoundIcon -> {
+            SquareArt(app, bannerLoader, min(width, height), kind)
+        }
+
+        ArtKind.Banner -> {
+            BannerArt(app, bannerLoader, width, height)
+        }
+
+        ArtKind.Icon -> {
+            Box(Modifier.size(width, height), contentAlignment = Alignment.Center) {
+                SquareArt(app, bannerLoader, FlatIconSize, kind)
+            }
+        }
+    }
+}
+
+/** The [kind] of art of [app], [size] wide and high. */
+@Composable
+internal fun SquareArt(
     app: InstalledApp,
     bannerLoader: BannerLoader,
     size: Dp,
+    kind: ArtKind,
 ) {
     val sizePx = with(LocalDensity.current) { size.roundToPx() }
-    val art = rememberArt(app, bannerLoader, sizePx, sizePx, ArtKind.RoundIcon)
+    val art = rememberArt(app, bannerLoader, sizePx, sizePx, kind)
     art?.let { Image(bitmap = it, contentDescription = null, modifier = Modifier.size(size)) }
 }
 
-/** The banner of [app], stretched over [width] by [height]. */
 @Composable
-internal fun BannerArt(
+private fun BannerArt(
     app: InstalledApp,
     bannerLoader: BannerLoader,
     width: Dp,
@@ -180,7 +219,7 @@ internal fun BannerArt(
     val density = LocalDensity.current
     val widthPx = with(density) { width.roundToPx() }
     val heightPx = with(density) { height.roundToPx() }
-    val art = rememberArt(app, bannerLoader, widthPx, heightPx)
+    val art = rememberArt(app, bannerLoader, widthPx, heightPx, ArtKind.Banner)
     art?.let {
         Image(
             bitmap = it,
@@ -191,28 +230,13 @@ internal fun BannerArt(
     }
 }
 
-/** The icon of an app without a banner, in the middle of [width] by [height]. */
 @Composable
-internal fun FlatIconArt(
-    app: InstalledApp,
-    bannerLoader: BannerLoader,
-    width: Dp,
-    height: Dp,
-) {
-    val iconPx = with(LocalDensity.current) { FlatIconSize.roundToPx() }
-    val icon = rememberArt(app, bannerLoader, iconPx, iconPx, ArtKind.Icon)
-    Box(Modifier.size(width, height), contentAlignment = Alignment.Center) {
-        icon?.let { Image(bitmap = it, contentDescription = null, modifier = Modifier.size(FlatIconSize)) }
-    }
-}
-
-@Composable
-internal fun rememberArt(
+private fun rememberArt(
     app: InstalledApp,
     bannerLoader: BannerLoader,
     widthPx: Int,
     heightPx: Int,
-    kind: ArtKind = ArtKind.Banner,
+    kind: ArtKind,
 ): ImageBitmap? {
     val bitmap by produceState(
         initialValue = bannerLoader.peek(app, widthPx, heightPx, kind),

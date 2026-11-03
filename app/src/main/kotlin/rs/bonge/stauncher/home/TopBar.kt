@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,24 +23,16 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import rs.bonge.stauncher.R
-import rs.bonge.stauncher.ui.FocusStyle
-import rs.bonge.stauncher.ui.FocusSurface
 import rs.bonge.stauncher.ui.ScreenMargin
 
 // The measurements are those of the top menu of Google TV: a capsule 44 dp high, with round buttons of 36 dp in it.
 private val BarTop = 32.dp
 private val CapsuleHeight = 44.dp
-private val CapsulePadding = 4.dp
-private val ButtonSize = CapsuleHeight - CapsulePadding * 2
-private val ButtonIconSize = 18.dp
 
 /**
  * The top bar, reached with up from the row: the settings button at the far left and the [time] at the far right. While
@@ -88,28 +78,16 @@ private fun SettingsButton(
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
-            Modifier
-                .size(CapsuleHeight)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.tertiaryContainer)
-                .padding(CapsulePadding),
+            Modifier.size(CapsuleHeight).clip(CircleShape).background(MaterialTheme.colorScheme.tertiaryContainer),
+            contentAlignment = Alignment.Center,
         ) {
-            FocusSurface(
+            RoundSettingsButton(
+                label = label,
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
                 onClick = onOpenSettings,
                 onLongClick = onOpenSystemSettings,
-                shape = CircleShape,
-                style = FocusStyle.Fill,
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                modifier =
-                    modifier
-                        .size(ButtonSize)
-                        .onFocusChanged { focused = it.isFocused }
-                        .semantics { contentDescription = label },
-            ) {
-                Box(Modifier.size(ButtonSize), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Outlined.Settings, contentDescription = null, modifier = Modifier.size(ButtonIconSize))
-                }
-            }
+                modifier = modifier.onFocusChanged { focused = it.isFocused },
+            )
         }
         ButtonLabel(text = label, visible = focused, buttonWidth = CapsuleHeight)
     }

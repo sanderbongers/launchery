@@ -52,14 +52,14 @@ class BannerLoader(
         app: InstalledApp,
         width: Int,
         height: Int,
-        kind: ArtKind = ArtKind.Banner,
+        kind: ArtKind,
     ): Bitmap? = cache[key(app, width, height, kind)]
 
     suspend fun load(
         app: InstalledApp,
         width: Int,
         height: Int,
-        kind: ArtKind = ArtKind.Banner,
+        kind: ArtKind,
     ): Bitmap? {
         peek(app, width, height, kind)?.let { return it }
         val bitmap = withContext(Dispatchers.IO) { render(app, width, height, kind) } ?: return null

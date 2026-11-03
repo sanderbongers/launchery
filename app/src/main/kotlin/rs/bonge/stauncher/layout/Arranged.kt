@@ -2,14 +2,18 @@ package rs.bonge.stauncher.layout
 
 import rs.bonge.stauncher.apps.InstalledApp
 import rs.bonge.stauncher.apps.sortedByInstallDate
+import java.text.Collator
 
-/** The installed apps as the home row and the settings screen show them. */
+// The hidden apps are listed to be found by name, not by the slot they came from.
+private val byName = compareBy<InstalledApp, String>(Collator.getInstance()) { it.label }.thenBy { it.packageName }
+
+/** The installed apps as the home row and the settings sheet show them. */
 class Arranged internal constructor(
     private val all: List<InstalledApp>,
     private val hiddenPackages: Set<String>,
 ) {
     val visible: List<InstalledApp> = all.filter { it.packageName !in hiddenPackages }
-    val hidden: List<InstalledApp> = all.filter { it.packageName in hiddenPackages }
+    val hidden: List<InstalledApp> = all.filter { it.packageName in hiddenPackages }.sortedWith(byName)
 
     /**
      * The layout to save once the visible apps are in [visibleOrder]. Hidden apps keep their slots, so the visible
