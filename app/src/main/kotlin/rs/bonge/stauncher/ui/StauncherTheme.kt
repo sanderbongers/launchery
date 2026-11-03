@@ -27,6 +27,11 @@ fun StauncherTheme(content: @Composable () -> Unit) {
             onSurfaceVariant = colorResource(R.color.text_secondary),
             secondaryContainer = colorResource(R.color.sheet_tile),
             onSecondaryContainer = colorResource(R.color.text_primary),
+            // The capsule at the top of the home screen, and the round buttons in it.
+            tertiaryContainer = colorResource(R.color.capsule_surface),
+            onTertiaryContainer = colorResource(R.color.text_primary),
+            primaryContainer = colorResource(R.color.capsule_button),
+            onPrimaryContainer = colorResource(R.color.text_primary),
             inverseSurface = colorResource(R.color.focus_fill),
             inverseOnSurface = colorResource(R.color.on_focus_fill),
             border = colorResource(R.color.focus_ring),

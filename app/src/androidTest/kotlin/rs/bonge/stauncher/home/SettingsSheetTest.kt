@@ -12,6 +12,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyPress
@@ -83,19 +84,20 @@ class SettingsSheetTest {
         rule.waitForIdle()
     }
 
-    /** From the main page: down to the Hidden apps tile, then select. */
+    /** From the main page: down past the Show apps as tile to the Hidden apps tile, then select. */
     private fun openHiddenApps() {
-        press(AndroidKeyEvent.KEYCODE_DPAD_DOWN)
+        repeat(2) { press(AndroidKeyEvent.KEYCODE_DPAD_DOWN) }
         press(AndroidKeyEvent.KEYCODE_DPAD_CENTER)
     }
 
     @Test
-    fun `starts on the Show apps as tile with the other tiles below it`() {
+    fun `starts on the All settings button with the tiles below it`() {
         showSheet()
 
-        rule.onNodeWithText("Show apps as").assertIsFocused()
-        rule.onNodeWithText("Hidden apps").assertIsDisplayed()
+        rule.onNodeWithContentDescription("All settings").assertIsFocused()
         rule.onNodeWithText("All settings").assertIsDisplayed()
+        rule.onNodeWithText("Show apps as").assertIsDisplayed()
+        rule.onNodeWithText("Hidden apps").assertIsDisplayed()
         assertTrue(rule.onAllNodes(hasText("App 1")).fetchSemanticsNodes().isEmpty())
     }
 
@@ -104,6 +106,7 @@ class SettingsSheetTest {
         showSheet()
         rule.onNodeWithText("Round icons").assertIsDisplayed()
 
+        press(AndroidKeyEvent.KEYCODE_DPAD_DOWN)
         press(AndroidKeyEvent.KEYCODE_DPAD_CENTER)
 
         assertEquals(listOf("toggle style"), calls)
@@ -120,7 +123,6 @@ class SettingsSheetTest {
     @Test
     fun `opens the system settings on select`() {
         showSheet()
-        repeat(2) { press(AndroidKeyEvent.KEYCODE_DPAD_DOWN) }
 
         press(AndroidKeyEvent.KEYCODE_DPAD_CENTER)
 
@@ -194,7 +196,7 @@ class SettingsSheetTest {
         back()
 
         rule.onNodeWithText("Hidden apps").assertIsFocused()
-        rule.onNodeWithText("All settings").assertIsDisplayed()
+        rule.onNodeWithText("Show apps as").assertIsDisplayed()
         assertTrue(rule.onAllNodes(hasText("App 1")).fetchSemanticsNodes().isEmpty())
     }
 }

@@ -26,7 +26,10 @@ import rs.bonge.stauncher.apps.BannerLoader
 import rs.bonge.stauncher.apps.InstalledApp
 import rs.bonge.stauncher.ui.ScreenMargin
 
-private val HeadingSize = 28.sp
+private val HeadingSize = 32.sp
+
+// The stock launcher keeps about 34 dp between the base of its heading and the icons; the row itself has 16 dp.
+private val HeadingGap = 11.dp
 
 /** What the home screen asks of its host. */
 class HomeCallbacks(
@@ -117,7 +120,7 @@ fun HomeScreen(
                     color = MaterialTheme.colorScheme.onSurface,
                     fontSize = HeadingSize,
                     maxLines = 1,
-                    modifier = Modifier.padding(start = ScreenMargin),
+                    modifier = Modifier.padding(start = ScreenMargin, bottom = HeadingGap),
                 )
                 AppRow(
                     apps = state.apps,
@@ -140,7 +143,6 @@ fun HomeScreen(
         (state.mode as? HomeMode.Actions)?.let { actions ->
             ActionsScreen(
                 app = actions.app,
-                style = state.appStyle,
                 canMove = state.apps.size > 1,
                 bannerLoader = bannerLoader,
                 onMove = callbacks.onStartMove,

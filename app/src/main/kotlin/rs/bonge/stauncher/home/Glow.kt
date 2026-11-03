@@ -12,19 +12,56 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.colorspace.ColorSpaces
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.createBitmap
 import rs.bonge.stauncher.apps.ArtKind
 import rs.bonge.stauncher.apps.InstalledApp
 import rs.bonge.stauncher.settings.AppStyle
+import kotlin.math.hypot
+import kotlin.math.roundToInt
 
-// Google TV tints its background only a little with the colour of the focused app: a red banner lifts the red of its
-// dark background by about 17 of 255.
-private const val GLOW_ALPHA = 0.11f
-private const val GLOW_FADE_MILLIS = 400
-private val GlowRadius = 440.dp
+private const val GLOW_FADE_MILLIS = 500
+private val GlowRadius = 250.dp
+
+// The glow of the stock launcher, measured on a Chromecast: a halo that is strongest at the focused tile and, from
+// there, falls off about e-fold per 63 dp. Each pair is a distance as a part of the radius and the opacity there.
+private val GlowProfile =
+    arrayOf(0f to 0.5f, 0.19f to 0.24f, 0.34f to 0.13f, 0.5f to 0.07f, 0.75f to 0.03f, 1f to 0f)
+
+private const val GLOW_MASK_SIZE = 256
+
+// The glow is the same soft disc for every app, so it is worked out once, in white, and each frame only scales it and
+// tints it with the colour of the app. A gradient shader redrawn on every frame of the ring's pulse was too heavy for a
+// Chromecast.
+private val GlowMask: ImageBitmap by lazy {
+    val half = GLOW_MASK_SIZE / 2f
+    val pixels =
+        IntArray(GLOW_MASK_SIZE * GLOW_MASK_SIZE) { index ->
+            val distance = hypot((index % GLOW_MASK_SIZE) + 0.5f - half, (index / GLOW_MASK_SIZE) + 0.5f - half) / half
+            val alpha = (glowOpacityAt(distance) * 255f).roundToInt()
+            (alpha shl 24) or 0xFFFFFF
+        }
+    createBitmap(GLOW_MASK_SIZE, GLOW_MASK_SIZE)
+        .apply { setPixels(pixels, 0, GLOW_MASK_SIZE, 0, 0, GLOW_MASK_SIZE, GLOW_MASK_SIZE) }
+        .asImageBitmap()
+}
+
+private fun glowOpacityAt(distance: Float): Float {
+    val next = GlowProfile.indexOfFirst { (stop, _) -> stop >= distance }
+    if (next < 0) return 0f
+    if (next == 0) return GlowProfile.first().second
+    val (from, fromOpacity) = GlowProfile[next - 1]
+    val (to, toOpacity) = GlowProfile[next]
+    return fromOpacity + (toOpacity - fromOpacity) * (distance - from) / (to - from)
+}
 
 /** What the loader draws for [app] in [style]; the glow takes its colour from the same art. */
 internal fun artKindFor(
@@ -47,9 +84,9 @@ class GlowState {
 
     internal var center by mutableStateOf(Offset.Zero)
 
-    /** Fades to the glow of [target], or away when it is null, keeping the colour it had while it fades. */
+    /** Fades to the glow of the opaque colour [target], or away when it is null, keeping its colour while it fades. */
     internal suspend fun fadeTo(target: Color?) {
-        val to = target?.copy(alpha = GLOW_ALPHA) ?: color.value.copy(alpha = 0f)
+        val to = target ?: color.value.copy(alpha = 0f)
         color.animateTo(to, tween(GLOW_FADE_MILLIS))
     }
 }
@@ -63,6 +100,12 @@ fun Modifier.glow(glow: GlowState): Modifier =
         val color = glow.color.value
         if (color.alpha > 0f) {
             val radius = GlowRadius.toPx()
-            drawRect(Brush.radialGradient(listOf(color, Color.Transparent), center = glow.center, radius = radius))
+            val diameter = (radius * 2).roundToInt()
+            drawImage(
+                GlowMask,
+                dstOffset = IntOffset((glow.center.x - radius).roundToInt(), (glow.center.y - radius).roundToInt()),
+                dstSize = IntSize(diameter, diameter),
+                colorFilter = ColorFilter.tint(color, BlendMode.SrcIn),
+            )
         }
     }

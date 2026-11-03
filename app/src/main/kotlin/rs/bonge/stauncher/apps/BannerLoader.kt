@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Path
-import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.Drawable
 import android.util.LruCache
 import androidx.core.graphics.applyCanvas
@@ -27,9 +26,6 @@ enum class ArtKind {
     /** The icon cut to a circle. Nothing outside the circle is drawn, so the surface it sits on shows around the icon. */
     RoundIcon,
 }
-
-// A flat icon is square, and a square only fits inside a circle at about 70% of its width. Some room is left around it.
-private const val FLAT_ICON_INSET = 0.175f
 
 /** Renders an app's banner or icon at the size the screen needs. */
 class BannerLoader(
@@ -76,8 +72,8 @@ class BannerLoader(
     private val glowColors = ConcurrentHashMap<Key, Int>()
 
     /**
-     * The most vivid colour of the app's art as an opaque ARGB value, or null for art that has no colour, like a white or
-     * grey logo. The colour is worked out once per app and kind of art.
+     * The most vivid colour of the app's art as an opaque ARGB value, falling back to its muted ones, or null for art
+     * with no colour at all. The colour is worked out once per app and kind of art.
      */
     suspend fun glowColor(
         app: InstalledApp,
@@ -93,9 +89,12 @@ class BannerLoader(
         return color.takeIf { it != NO_GLOW }
     }
 
+    // A white or grey logo has no vivid colour; like the stock launcher, it then gets a pale grey glow from its muted ones.
     private fun vividColor(bitmap: Bitmap): Int? {
         val palette = Palette.from(bitmap).generate()
-        val swatch = palette.vibrantSwatch ?: palette.lightVibrantSwatch ?: palette.darkVibrantSwatch
+        val swatch =
+            palette.vibrantSwatch ?: palette.lightVibrantSwatch ?: palette.darkVibrantSwatch
+                ?: palette.lightMutedSwatch ?: palette.mutedSwatch
         return swatch?.rgb
     }
 
@@ -133,16 +132,15 @@ class BannerLoader(
         }
     }
 
-    // An adaptive icon fills the circle with its own background. A flat icon is set in the middle, on whatever is
-    // behind the circle.
+    // Like the stock launcher, the icon fills the circle edge to edge. A flat icon has its corners cut off, and where it
+    // has no background of its own, the surface behind the circle shows through.
     private fun Canvas.drawRoundIcon(
         drawable: Drawable,
         size: Int,
     ) {
         val circle = Path().apply { addCircle(size / 2f, size / 2f, size / 2f, Path.Direction.CW) }
         withClip(circle) {
-            val inset = if (drawable is AdaptiveIconDrawable) 0 else (size * FLAT_ICON_INSET).toInt()
-            drawable.setBounds(inset, inset, size - inset, size - inset)
+            drawable.setBounds(0, 0, size, size)
             drawable.draw(this)
         }
     }

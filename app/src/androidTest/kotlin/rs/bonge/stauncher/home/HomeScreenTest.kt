@@ -416,11 +416,11 @@ class HomeScreenTest {
     }
 
     @Test
-    fun `focuses the first tile of the settings sheet and closes the sheet with Back`() {
+    fun `focuses the All settings button of the sheet first and closes the sheet with Back`() {
         showHome()
 
         openSettings()
-        rule.onNodeWithText("Show apps as").assertIsFocused()
+        rule.onNodeWithContentDescription("All settings").assertIsFocused()
         back()
 
         assertEquals(HomeMode.Browsing, viewModel.uiState.value.mode)
@@ -433,10 +433,10 @@ class HomeScreenTest {
         openSettings()
 
         repeat(5) { press(AndroidKeyEvent.KEYCODE_DPAD_DOWN) }
-        rule.onNodeWithText("All settings").assertIsFocused()
+        rule.onNodeWithText("Hidden apps").assertIsFocused()
         repeat(5) { press(AndroidKeyEvent.KEYCODE_DPAD_UP) }
 
-        rule.onNodeWithText("Show apps as").assertIsFocused()
+        rule.onNodeWithContentDescription("All settings").assertIsFocused()
     }
 
     @Test
@@ -444,6 +444,7 @@ class HomeScreenTest {
         showHome()
         openSettings()
 
+        press(AndroidKeyEvent.KEYCODE_DPAD_DOWN)
         press(AndroidKeyEvent.KEYCODE_DPAD_CENTER)
 
         assertEquals(AppStyle.RoundIcons, viewModel.uiState.value.appStyle)
@@ -479,7 +480,8 @@ class HomeScreenTest {
         val screen = rule.onRoot().getUnclippedBoundsInRoot()
         val time = rule.onNodeWithText("20:15").getUnclippedBoundsInRoot()
         val settings = rule.onNodeWithContentDescription("Settings").getUnclippedBoundsInRoot()
-        assertEquals(58f, settings.left.value, 0.5f)
+        // The button sits in a capsule that starts at the margin and has 4 dp of padding.
+        assertEquals(62f, settings.left.value, 0.5f)
         assertEquals((screen.right - 58.dp).value, time.right.value, 0.5f)
         assertTrue("the button ends at ${settings.right}, the time starts at ${time.left}", settings.right <= time.left)
     }

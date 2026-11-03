@@ -32,6 +32,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -43,7 +44,6 @@ import androidx.tv.material3.Text
 import rs.bonge.stauncher.R
 import rs.bonge.stauncher.apps.BannerLoader
 import rs.bonge.stauncher.apps.InstalledApp
-import rs.bonge.stauncher.settings.AppStyle
 import rs.bonge.stauncher.ui.FocusStyle
 import rs.bonge.stauncher.ui.FocusSurface
 
@@ -53,7 +53,7 @@ private val ContentTop = 124.dp
 private val PreviewWidth = 195.dp
 private val PreviewHeight = 110.dp
 private val PreviewCornerRadius = 12.dp
-private val PreviewLabelGap = 16.dp
+private val PreviewLabelGap = 14.dp
 private val ActionsStart = 556.dp
 private val ActionWidth = 268.dp
 private val ActionHeight = 52.dp
@@ -63,15 +63,14 @@ private const val FOCUSED_SCALE = 1.05f
 private val FocusedGlow = Glow(elevationColor = Color.Black.copy(alpha = 0.5f), elevation = 12.dp)
 
 /**
- * The actions for one app, on a screen of their own: the app as it is on the row, with its name below, and a column
- * of buttons. Focus stays inside the buttons until the screen closes. App info comes first because Force stop, which
+ * The actions for one app, on a screen of their own: its banner, as Google TV shows it whatever the row looks like,
+ * with its name below, and a column of buttons. Focus stays inside the buttons until the screen closes. App info comes first because Force stop, which
  * only the system can do, is one step further in. Uninstall is offered only for apps the user installed, and Move only
  * when there is another app to swap places with.
  */
 @Composable
 fun ActionsScreen(
     app: InstalledApp,
-    style: AppStyle,
     canMove: Boolean,
     bannerLoader: BannerLoader,
     onMove: () -> Unit,
@@ -102,11 +101,11 @@ fun ActionsScreen(
             modifier = Modifier.padding(start = PreviewStart, top = ContentTop).width(PreviewWidth),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Preview(app, style, bannerLoader)
+            Preview(app, bannerLoader)
             Text(
                 text = app.label,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 13.sp,
+                color = colorResource(R.color.preview_label),
+                fontSize = 12.sp,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
@@ -140,27 +139,22 @@ fun ActionsScreen(
     }
 }
 
-/** The app in the style of the row: a round icon, or a banner card. */
+/** The banner of the app, or its icon on a plain card when it has no banner. */
 @Composable
 private fun Preview(
     app: InstalledApp,
-    style: AppStyle,
     bannerLoader: BannerLoader,
 ) {
-    val color = MaterialTheme.colorScheme.surfaceVariant
-    if (style == AppStyle.RoundIcons) {
-        Box(Modifier.size(PreviewHeight).clip(CircleShape).background(color)) {
-            RoundIconArt(app, bannerLoader, PreviewHeight)
-        }
-    } else {
-        Box(
-            Modifier.size(PreviewWidth, PreviewHeight).clip(RoundedCornerShape(PreviewCornerRadius)).background(color),
-        ) {
-            if (app.hasBanner) {
-                BannerArt(app, bannerLoader, PreviewWidth, PreviewHeight)
-            } else {
-                FlatIconArt(app, bannerLoader, PreviewWidth, PreviewHeight)
-            }
+    Box(
+        Modifier
+            .size(PreviewWidth, PreviewHeight)
+            .clip(RoundedCornerShape(PreviewCornerRadius))
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        if (app.hasBanner) {
+            BannerArt(app, bannerLoader, PreviewWidth, PreviewHeight)
+        } else {
+            FlatIconArt(app, bannerLoader, PreviewWidth, PreviewHeight)
         }
     }
 }
@@ -176,11 +170,12 @@ private fun ActionButton(
         shape = CircleShape,
         style = FocusStyle.Fill,
         modifier = modifier.fillMaxWidth().height(ActionHeight),
+        containerColor = colorResource(R.color.action_pill),
         focusedScale = FOCUSED_SCALE,
         focusedGlow = FocusedGlow,
     ) {
         Box(Modifier.fillMaxSize().padding(start = ActionTextStart), contentAlignment = Alignment.CenterStart) {
-            Text(text = text, fontSize = 20.sp, maxLines = 1)
+            Text(text = text, fontSize = 16.sp, maxLines = 1)
         }
     }
 }
