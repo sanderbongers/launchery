@@ -12,7 +12,8 @@ Android 14 (API 34) or newer.
 
 ## Using it
 
-- Select starts an app. Holding select opens its actions: App info, Move, Hide and Uninstall. Force stop is in App info.
+- Select starts an app. Holding select opens its actions: App info, Move, Hide and, for apps you installed, Uninstall.
+  Force stop is in App info.
 - Left and right move along the row. At the first or the last app, hold the key to break through to the other end. A
   short press there does nothing, so a stray press never loops the row.
 - Up from the row reaches the cog. Select opens the settings: "Show apps as" switches between round icons and banners,
@@ -21,14 +22,16 @@ Android 14 (API 34) or newer.
 
 ## Installing
 
-You need a computer with `adb` and the TV's Developer options with Wireless debugging switched on. The commands are the
-same in any shell.
+You need a computer with `adb` and Wireless debugging switched on in the TV's Developer options. To show Developer
+options, open Settings > System > About and select "Android TV OS build" seven times. Wireless debugging is then in
+Settings > System > Developer options. The commands are the same in any shell.
 
 > **Install and start Launchery before you disable the stock launcher.** With no other home app the TV has no home
 > screen, and Settings becomes hard to reach.
 
-1. Download `launchery-0.1.0.apk` and `launchery-0.1.0.apk.sha256` from the release page, and check them as described
-   in [Checking a download](#checking-a-download).
+1. Download `launchery-0.1.0.apk` and `launchery-0.1.0.apk.sha256` from the
+   [release page](https://github.com/sanderbongers/launchery/releases), and check them as described in
+   [Checking a download](#checking-a-download).
 2. Connect to the TV. The pairing code, the pairing port and the connection port are on the Wireless debugging screen,
    and the connection port changes after a restart of the TV.
 
@@ -90,9 +93,15 @@ Home then opens the stock launcher again, because it has the higher priority. If
 before, give it back with `adb shell cmd role add-role-holder --user 0 android.app.role.HOME <package>`. On the tested
 Chromecast, Projectivy was that launcher.
 
+To remove Launchery as well, uninstall it once Home opens the other launcher:
+
+```bash
+adb uninstall rs.bonge.launchery
+```
+
 ## If something goes wrong
 
-If Launchery fails to start while the stock launcher is disabled, the undo above needs a way in:
+The undo above needs `adb`. If `adb` stops connecting while the stock launcher is disabled, Settings is hard to reach:
 
 - From Launchery, the cog opens the system settings. On the tested Chromecast, Developer options and Wireless debugging
   could be reached by hand there after a restart, with a new connection port.
@@ -101,6 +110,12 @@ If Launchery fails to start while the stock launcher is disabled, the undo above
 
 Holding the Assistant button and saying "open settings" is not a route: on the tested Chromecast Google showed a
 "Verify network change" screen and did not open Settings.
+
+If Launchery does not start and `adb` does not connect, a factory reset is the last resort. It clears all data on the
+Chromecast, which can't be recovered. Google's
+[reset instructions](https://support.google.com/chromecast/answer/6254654) for the Chromecast with Google TV: while it
+is on, hold the button on its back until the LED blinks yellow, and release it when the LED turns solid white. This
+comes from Google's support page and was not tried.
 
 ## Known losses
 
