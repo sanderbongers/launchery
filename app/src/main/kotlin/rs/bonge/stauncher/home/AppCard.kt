@@ -107,9 +107,9 @@ fun AppCard(
             focusedScale = if (lifted) LIFTED_SCALE else FOCUSED_SCALE,
         ) {
             when {
-                round -> RoundIconArt(app, bannerLoader)
-                app.hasBanner -> BannerArt(app, bannerLoader)
-                else -> FlatIconArt(app, bannerLoader)
+                round -> RoundIconArt(app, bannerLoader, RoundIconSize)
+                app.hasBanner -> BannerArt(app, bannerLoader, BannerWidth, BannerHeight)
+                else -> FlatIconArt(app, bannerLoader, BannerWidth, BannerHeight)
             }
         }
         if (round) RoundLabel(app.label, focused) else BannerLabel(app.label, focused)
@@ -157,43 +157,51 @@ private fun BannerLabel(
     }
 }
 
+/** The round icon of [app], [size] wide and high. */
 @Composable
-private fun RoundIconArt(
+internal fun RoundIconArt(
     app: InstalledApp,
     bannerLoader: BannerLoader,
+    size: Dp,
 ) {
-    val sizePx = with(LocalDensity.current) { RoundIconSize.roundToPx() }
+    val sizePx = with(LocalDensity.current) { size.roundToPx() }
     val art = rememberArt(app, bannerLoader, sizePx, sizePx, ArtKind.RoundIcon)
-    art?.let { Image(bitmap = it, contentDescription = null, modifier = Modifier.size(RoundIconSize)) }
+    art?.let { Image(bitmap = it, contentDescription = null, modifier = Modifier.size(size)) }
 }
 
+/** The banner of [app], stretched over [width] by [height]. */
 @Composable
-private fun BannerArt(
+internal fun BannerArt(
     app: InstalledApp,
     bannerLoader: BannerLoader,
+    width: Dp,
+    height: Dp,
 ) {
     val density = LocalDensity.current
-    val widthPx = with(density) { BannerWidth.roundToPx() }
-    val heightPx = with(density) { BannerHeight.roundToPx() }
+    val widthPx = with(density) { width.roundToPx() }
+    val heightPx = with(density) { height.roundToPx() }
     val art = rememberArt(app, bannerLoader, widthPx, heightPx)
     art?.let {
         Image(
             bitmap = it,
             contentDescription = null,
-            modifier = Modifier.size(BannerWidth, BannerHeight),
+            modifier = Modifier.size(width, height),
             contentScale = ContentScale.FillBounds,
         )
     }
 }
 
+/** The icon of an app without a banner, in the middle of [width] by [height]. */
 @Composable
-private fun FlatIconArt(
+internal fun FlatIconArt(
     app: InstalledApp,
     bannerLoader: BannerLoader,
+    width: Dp,
+    height: Dp,
 ) {
     val iconPx = with(LocalDensity.current) { FlatIconSize.roundToPx() }
     val icon = rememberArt(app, bannerLoader, iconPx, iconPx, ArtKind.Icon)
-    Box(Modifier.size(BannerWidth, BannerHeight), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(width, height), contentAlignment = Alignment.Center) {
         icon?.let { Image(bitmap = it, contentDescription = null, modifier = Modifier.size(FlatIconSize)) }
     }
 }

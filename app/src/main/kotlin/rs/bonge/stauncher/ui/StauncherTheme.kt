@@ -21,10 +21,12 @@ fun StauncherTheme(content: @Composable () -> Unit) {
         darkColorScheme(
             background = colorResource(R.color.background),
             onBackground = colorResource(R.color.text_primary),
-            surface = colorResource(R.color.background),
+            surface = colorResource(R.color.sheet_surface),
             onSurface = colorResource(R.color.text_primary),
             surfaceVariant = colorResource(R.color.card_surface),
             onSurfaceVariant = colorResource(R.color.text_secondary),
+            secondaryContainer = colorResource(R.color.sheet_tile),
+            onSecondaryContainer = colorResource(R.color.text_primary),
             inverseSurface = colorResource(R.color.focus_fill),
             inverseOnSurface = colorResource(R.color.on_focus_fill),
             border = colorResource(R.color.focus_ring),

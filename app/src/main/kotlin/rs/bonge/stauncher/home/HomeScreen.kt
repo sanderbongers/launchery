@@ -32,7 +32,7 @@ private val HeadingSize = 28.sp
 class HomeCallbacks(
     val onLaunch: (InstalledApp) -> Unit,
     val onOpenActions: (InstalledApp) -> Unit,
-    /** Back: closes the actions panel, or puts a picked-up app back. */
+    /** Back: closes the settings or the actions screen, or puts a picked-up app back. */
     val onDismiss: () -> Unit,
     val onStartMove: () -> Unit,
     val onMoveBy: (Int) -> Unit,
@@ -41,6 +41,8 @@ class HomeCallbacks(
     val onAppInfo: (InstalledApp) -> Unit,
     val onUninstall: (InstalledApp) -> Unit,
     val onOpenSettings: () -> Unit,
+    val onToggleAppStyle: () -> Unit,
+    val onUnhide: (InstalledApp) -> Unit,
     val onOpenSystemSettings: () -> Unit,
 )
 
@@ -81,6 +83,15 @@ fun HomeScreen(
     val settingsFocus = remember { FocusRequester() }
     val rowEmpty = state.loaded && state.apps.isEmpty()
     LaunchedEffect(rowEmpty) { if (rowEmpty) settingsFocus.requestFocus() }
+
+    // The settings sheet takes focus while it is open. When it closes the button that opened it gets focus back. This
+    // comes before the row's effects, so that the first app still wins when the Home button closes the sheet.
+    val settingsOpen = state.mode is HomeMode.Settings
+    val settingsWereOpen = remember { booleanArrayOf(false) }
+    LaunchedEffect(settingsOpen) {
+        if (settingsWereOpen[0] && !settingsOpen) settingsFocus.requestFocus()
+        settingsWereOpen[0] = settingsOpen
+    }
 
     val glow = rememberGlowState()
     Box(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).glow(glow)) {
@@ -127,14 +138,26 @@ fun HomeScreen(
             MoveHint(Modifier.align(Alignment.BottomCenter).padding(bottom = 48.dp))
         }
         (state.mode as? HomeMode.Actions)?.let { actions ->
-            ActionsPanel(
+            ActionsScreen(
                 app = actions.app,
+                style = state.appStyle,
                 canMove = state.apps.size > 1,
                 bannerLoader = bannerLoader,
                 onMove = callbacks.onStartMove,
                 onHide = callbacks.onHide,
                 onAppInfo = { callbacks.onAppInfo(actions.app) },
                 onUninstall = { callbacks.onUninstall(actions.app) },
+            )
+        }
+        if (settingsOpen) {
+            SettingsSheet(
+                hidden = state.hidden,
+                hiddenLoaded = state.loaded,
+                appStyle = state.appStyle,
+                bannerLoader = bannerLoader,
+                onToggleAppStyle = callbacks.onToggleAppStyle,
+                onUnhide = callbacks.onUnhide,
+                onOpenSystemSettings = callbacks.onOpenSystemSettings,
             )
         }
     }

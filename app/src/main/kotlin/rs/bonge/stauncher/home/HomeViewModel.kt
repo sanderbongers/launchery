@@ -19,11 +19,16 @@ import rs.bonge.stauncher.layout.Arranged
 import rs.bonge.stauncher.layout.Layout
 import rs.bonge.stauncher.settings.AppStyle
 import java.io.IOException
+import java.text.Collator
+
+// The hidden apps are listed to be found by name, not by the slot they came from.
+private val byName = compareBy<InstalledApp, String>(Collator.getInstance()) { it.label }.thenBy { it.packageName }
 
 class HomeViewModel(
     arranged: Flow<Arranged>,
     appStyle: Flow<AppStyle>,
     private val saveLayout: suspend (Layout) -> Unit,
+    private val toggleAppStyleSetting: suspend () -> Unit,
 ) : ViewModel() {
     // What the user is in the middle of. Package names rather than apps, so it survives a rescan.
     private sealed interface Pending {
@@ -40,6 +45,7 @@ class HomeViewModel(
     }
 
     private val pending = MutableStateFlow<Pending?>(null)
+    private val settingsOpen = MutableStateFlow(false)
     private val homeRequests = MutableStateFlow(0)
 
     // No stop timeout: once the UI stops collecting, the upstream stops too, which unregisters the package callback.
@@ -47,22 +53,43 @@ class HomeViewModel(
 
     // The state is built only once the style is known too, so the row never flashes the other style first.
     val uiState: StateFlow<HomeUiState> =
-        combine(latest, pending, homeRequests, appStyle, ::build)
+        combine(latest, pending, settingsOpen, homeRequests, appStyle, ::build)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), HomeUiState())
 
     fun openActions(app: InstalledApp) {
         pending.value = Pending.Actions(app.packageName)
     }
 
-    /** Closes the actions panel, or puts a picked-up app back where it was. */
+    fun openSettings() {
+        settingsOpen.value = true
+    }
+
+    /** Closes the settings or the actions screen, or puts a picked-up app back where it was. */
     fun dismiss() {
         pending.value = null
+        settingsOpen.value = false
     }
 
     /** The Home button, or Stauncher started again: whatever is open is put away unsaved, and the row starts over. */
     fun goHome() {
-        pending.value = null
+        dismiss()
         homeRequests.update { it + 1 }
+    }
+
+    fun unhide(app: InstalledApp) {
+        val arranged = latest.value ?: return
+        save(arranged.layoutAfterUnhiding(app.packageName))
+    }
+
+    /** Switches to the other style. The store makes the update atomic, so two quick presses flip it twice. */
+    fun toggleAppStyle() {
+        viewModelScope.launch {
+            try {
+                toggleAppStyleSetting()
+            } catch (_: IOException) {
+                // The style stays as it was.
+            }
+        }
     }
 
     fun startMove() {
@@ -109,25 +136,29 @@ class HomeViewModel(
     private fun build(
         arranged: Arranged?,
         pending: Pending?,
+        settingsOpen: Boolean,
         homeRequests: Int,
         appStyle: AppStyle,
     ): HomeUiState {
         if (arranged == null) return HomeUiState(homeRequests = homeRequests, appStyle = appStyle)
         val visible = arranged.visible
         val target = visible.firstOrNull { it.packageName == pending?.packageName }
-        return when {
-            target == null -> {
-                HomeUiState(visible, loaded = true, homeRequests = homeRequests, appStyle = appStyle)
+        val mode =
+            when {
+                settingsOpen -> HomeMode.Settings
+                target == null -> HomeMode.Browsing
+                pending is Pending.Moving -> HomeMode.Moving(target)
+                else -> HomeMode.Actions(target)
             }
-
-            pending is Pending.Moving -> {
-                HomeUiState(preview(visible, pending.order), true, HomeMode.Moving(target), homeRequests, appStyle)
+        val apps =
+            if (mode is HomeMode.Moving &&
+                pending is Pending.Moving
+            ) {
+                preview(visible, pending.order)
+            } else {
+                visible
             }
-
-            else -> {
-                HomeUiState(visible, true, HomeMode.Actions(target), homeRequests, appStyle)
-            }
-        }
+        return HomeUiState(apps, true, mode, homeRequests, appStyle, arranged.hidden.sortedWith(byName))
     }
 
     // An app that arrived during the move is not in the preview order yet, so it goes to the end.
@@ -148,6 +179,7 @@ class HomeViewModel(
                         container.arrangedApps,
                         container.settingsRepository.appStyle,
                         container.layoutRepository::save,
+                        container.settingsRepository::toggleAppStyle,
                     )
                 }
             }

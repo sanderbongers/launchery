@@ -1,4 +1,4 @@
-package rs.bonge.stauncher.settings
+package rs.bonge.stauncher.home
 
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
@@ -24,14 +24,15 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import rs.bonge.stauncher.apps.BannerLoader
 import rs.bonge.stauncher.apps.InstalledApp
+import rs.bonge.stauncher.settings.AppStyle
 import android.view.KeyEvent as AndroidKeyEvent
 
 @RunWith(AndroidJUnit4::class)
-class SettingsScreenTest {
+class SettingsSheetTest {
     @get:Rule
     val rule = createAndroidComposeRule<ComponentActivity>()
 
-    // The packages do not exist, so no icons load; the rows still show their names.
+    // The packages do not exist, so no icons load; the tiles still show their names.
     private val bannerLoader =
         BannerLoader(InstrumentationRegistry.getInstrumentation().targetContext.packageManager)
 
@@ -47,20 +48,23 @@ class SettingsScreenTest {
             lastUpdateTime = number.toLong(),
         )
 
-    private var state by mutableStateOf(SettingsUiState(hidden = (1..3).map(::app), loaded = true))
+    private var hidden by mutableStateOf((1..3).map(::app))
+    private var appStyle by mutableStateOf(AppStyle.RoundIcons)
     private val calls = mutableListOf<String>()
 
-    // Unhiding removes the app from the state, like the view model does once the layout is saved.
-    private fun showSettings() {
+    // Unhiding removes the app from the list, like the view model does once the layout is saved.
+    private fun showSheet() {
         rule.setContent {
-            SettingsScreen(
-                state = state,
+            SettingsSheet(
+                hidden = hidden,
+                hiddenLoaded = true,
+                appStyle = appStyle,
                 bannerLoader = bannerLoader,
+                onToggleAppStyle = { calls += "toggle style" },
                 onUnhide = { app ->
                     calls += "unhide ${app.label}"
-                    state = state.copy(hidden = state.hidden - app)
+                    hidden = hidden - app
                 },
-                onToggleAppStyle = { calls += "toggle style" },
                 onOpenSystemSettings = { calls += "all settings" },
             )
         }
@@ -79,38 +83,27 @@ class SettingsScreenTest {
         rule.waitForIdle()
     }
 
-    /** From the main page: down to the Hidden apps row, then select. */
+    /** From the main page: down to the Hidden apps tile, then select. */
     private fun openHiddenApps() {
         press(AndroidKeyEvent.KEYCODE_DPAD_DOWN)
         press(AndroidKeyEvent.KEYCODE_DPAD_CENTER)
     }
 
     @Test
-    fun `starts on the All settings row with the Hidden apps row below it`() {
-        showSettings()
+    fun `starts on the Show apps as tile with the other tiles below it`() {
+        showSheet()
 
-        rule.onNodeWithText("All settings").assertIsFocused()
+        rule.onNodeWithText("Show apps as").assertIsFocused()
         rule.onNodeWithText("Hidden apps").assertIsDisplayed()
+        rule.onNodeWithText("All settings").assertIsDisplayed()
         assertTrue(rule.onAllNodes(hasText("App 1")).fetchSemanticsNodes().isEmpty())
     }
 
     @Test
-    fun `opens the system settings on select`() {
-        showSettings()
-
-        press(AndroidKeyEvent.KEYCODE_DPAD_CENTER)
-
-        assertEquals(listOf("all settings"), calls)
-    }
-
-    @Test
-    fun `names the style the apps are shown in and switches it on select`() {
-        showSettings()
-        rule.onNodeWithText("Show apps as").assertIsDisplayed()
+    fun `names the style in use and switches it on select`() {
+        showSheet()
         rule.onNodeWithText("Round icons").assertIsDisplayed()
 
-        repeat(2) { press(AndroidKeyEvent.KEYCODE_DPAD_DOWN) }
-        rule.onNodeWithText("Show apps as").assertIsFocused()
         press(AndroidKeyEvent.KEYCODE_DPAD_CENTER)
 
         assertEquals(listOf("toggle style"), calls)
@@ -118,15 +111,25 @@ class SettingsScreenTest {
 
     @Test
     fun `names the banner style when that is in use`() {
-        state = state.copy(appStyle = AppStyle.Banners)
-        showSettings()
+        appStyle = AppStyle.Banners
+        showSheet()
 
         rule.onNodeWithText("Banners").assertIsDisplayed()
     }
 
     @Test
+    fun `opens the system settings on select`() {
+        showSheet()
+        repeat(2) { press(AndroidKeyEvent.KEYCODE_DPAD_DOWN) }
+
+        press(AndroidKeyEvent.KEYCODE_DPAD_CENTER)
+
+        assertEquals(listOf("all settings"), calls)
+    }
+
+    @Test
     fun `opens the list of hidden apps and focuses the first app`() {
-        showSettings()
+        showSheet()
 
         openHiddenApps()
 
@@ -137,8 +140,8 @@ class SettingsScreenTest {
 
     @Test
     fun `says so when no app is hidden`() {
-        state = state.copy(hidden = emptyList())
-        showSettings()
+        hidden = emptyList()
+        showSheet()
 
         openHiddenApps()
 
@@ -148,7 +151,7 @@ class SettingsScreenTest {
 
     @Test
     fun `unhides the focused app on select and keeps focus at the same place in the list`() {
-        showSettings()
+        showSheet()
         openHiddenApps()
         press(AndroidKeyEvent.KEYCODE_DPAD_DOWN)
         rule.onNodeWithText("App 2").assertIsFocused()
@@ -161,7 +164,7 @@ class SettingsScreenTest {
 
     @Test
     fun `moves focus up when the last app of the list is unhidden`() {
-        showSettings()
+        showSheet()
         openHiddenApps()
         repeat(2) { press(AndroidKeyEvent.KEYCODE_DPAD_DOWN) }
         rule.onNodeWithText("App 3").assertIsFocused()
@@ -173,8 +176,8 @@ class SettingsScreenTest {
 
     @Test
     fun `says so when the last hidden app is unhidden`() {
-        state = state.copy(hidden = listOf(app(1)))
-        showSettings()
+        hidden = listOf(app(1))
+        showSheet()
         openHiddenApps()
         rule.onNodeWithText("App 1").assertIsFocused()
 
@@ -184,8 +187,8 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun `goes back from the list to the main page on the Hidden apps row`() {
-        showSettings()
+    fun `goes back from the list to the main page on the Hidden apps tile`() {
+        showSheet()
         openHiddenApps()
 
         back()

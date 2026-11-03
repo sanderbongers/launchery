@@ -45,7 +45,11 @@ class HomeViewModelTest {
             layout.value = it
         },
     ): HomeViewModel {
-        val viewModel = HomeViewModel(combine(installed, layout, ::arrangeApps), appStyle, save)
+        val viewModel =
+            HomeViewModel(combine(installed, layout, ::arrangeApps), appStyle, save) {
+                appStyle.value =
+                    appStyle.value.next()
+            }
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         return viewModel
     }
@@ -55,7 +59,7 @@ class HomeViewModelTest {
     @Test
     fun `is not loaded until the apps and the layout are known`() =
         runTest {
-            val viewModel = HomeViewModel(MutableSharedFlow<Arranged>(), appStyle) {}
+            val viewModel = HomeViewModel(MutableSharedFlow<Arranged>(), appStyle, {}, {})
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
 
             assertEquals(HomeUiState(), viewModel.uiState.value)
@@ -76,10 +80,80 @@ class HomeViewModelTest {
     @Test
     fun `is not loaded until the style is known, so the row never shows the wrong style first`() =
         runTest {
-            val viewModel = HomeViewModel(combine(installed, layout, ::arrangeApps), emptyFlow()) {}
+            val viewModel = HomeViewModel(combine(installed, layout, ::arrangeApps), emptyFlow(), {}, {})
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
 
             assertEquals(HomeUiState(), viewModel.uiState.value)
+        }
+
+    @Test
+    fun `lists the hidden apps by name, ignoring case, not by their slot`() =
+        runTest {
+            val beta = testApp("p.1", label = "beta")
+            val alpha = testApp("p.2", label = "Alpha")
+            val zulu = testApp("p.3", label = "Zulu")
+            installed.value = listOf(beta, alpha, zulu)
+            layout.value = Layout(order = listOf("p.3", "p.1", "p.2"), hidden = setOf("p.1", "p.2", "p.3"))
+
+            val viewModel = viewModel()
+
+            assertEquals(listOf(alpha, beta, zulu), viewModel.uiState.value.hidden)
+            assertTrue(viewModel.packages().isEmpty())
+        }
+
+    @Test
+    fun `unhides an app and saves the layout`() =
+        runTest {
+            layout.value = Layout(order = listOf("a", "b", "c"), hidden = setOf("b"))
+            val viewModel = viewModel()
+            assertEquals(listOf(b), viewModel.uiState.value.hidden)
+
+            viewModel.unhide(b)
+
+            assertEquals(listOf(Layout(order = listOf("a", "b", "c"), hidden = emptySet())), saved)
+            assertTrue(
+                viewModel.uiState.value.hidden
+                    .isEmpty(),
+            )
+            assertEquals(listOf("a", "b", "c"), viewModel.packages())
+        }
+
+    @Test
+    fun `switches between the two app styles`() =
+        runTest {
+            val viewModel = viewModel()
+            assertEquals(AppStyle.RoundIcons, viewModel.uiState.value.appStyle)
+
+            viewModel.toggleAppStyle()
+            assertEquals(AppStyle.Banners, viewModel.uiState.value.appStyle)
+
+            viewModel.toggleAppStyle()
+            assertEquals(AppStyle.RoundIcons, viewModel.uiState.value.appStyle)
+        }
+
+    @Test
+    fun `opens the settings and closes them again`() =
+        runTest {
+            val viewModel = viewModel()
+
+            viewModel.openSettings()
+            assertEquals(HomeMode.Settings, viewModel.uiState.value.mode)
+
+            viewModel.dismiss()
+            assertEquals(HomeMode.Browsing, viewModel.uiState.value.mode)
+        }
+
+    @Test
+    fun `puts the settings away when the user goes home`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.openSettings()
+            val requests = viewModel.uiState.value.homeRequests
+
+            viewModel.goHome()
+
+            assertEquals(HomeMode.Browsing, viewModel.uiState.value.mode)
+            assertEquals(requests + 1, viewModel.uiState.value.homeRequests)
         }
 
     @Test
@@ -106,7 +180,7 @@ class HomeViewModelTest {
     fun `observes the apps only while the UI collects the state`() =
         runTest {
             val upstream = MutableSharedFlow<Arranged>()
-            val viewModel = HomeViewModel(upstream, appStyle) {}
+            val viewModel = HomeViewModel(upstream, appStyle, {}, {})
             assertEquals(0, upstream.subscriptionCount.value)
 
             val collector = launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }

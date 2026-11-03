@@ -15,7 +15,6 @@ import rs.bonge.stauncher.apps.InstalledApp
 import rs.bonge.stauncher.home.HomeCallbacks
 import rs.bonge.stauncher.home.HomeScreen
 import rs.bonge.stauncher.home.HomeViewModel
-import rs.bonge.stauncher.settings.SettingsActivity
 import rs.bonge.stauncher.ui.StauncherTheme
 
 class HomeActivity : ComponentActivity() {
@@ -59,7 +58,9 @@ class HomeActivity : ComponentActivity() {
                                 reportFailure(getString(R.string.action_uninstall))
                             }
                         },
-                        onOpenSettings = { startActivity(Intent(this, SettingsActivity::class.java)) },
+                        onOpenSettings = viewModel::openSettings,
+                        onToggleAppStyle = viewModel::toggleAppStyle,
+                        onUnhide = viewModel::unhide,
                         onOpenSystemSettings = {
                             if (!container.appActions.openSystemSettings()) reportFailure(getString(R.string.settings))
                         },

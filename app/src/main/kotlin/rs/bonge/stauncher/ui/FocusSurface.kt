@@ -4,10 +4,13 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
 import androidx.tv.material3.ClickableSurfaceDefaults
+import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 
@@ -25,7 +28,8 @@ enum class FocusStyle {
 
 /**
  * The clickable surface of the home screen and the settings. It grows by [focusedScale] while focused, in the way its
- * [style] says. Text on it takes the content colour, so that it turns dark together with a [FocusStyle.Fill] surface.
+ * [style] says, and casts [focusedGlow] around it. Text on it takes the content colour, so that it turns dark together
+ * with a [FocusStyle.Fill] surface. Its colour is [containerColor], or the card colour of the theme.
  */
 @Composable
 fun FocusSurface(
@@ -34,11 +38,14 @@ fun FocusSurface(
     style: FocusStyle,
     modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
+    containerColor: Color = Color.Unspecified,
     focusedScale: Float = 1f,
+    focusedGlow: Glow = Glow.None,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val focusedContainer = if (style == FocusStyle.Fill) scheme.inverseSurface else scheme.surfaceVariant
+    val container = containerColor.takeOrElse { scheme.surfaceVariant }
+    val focusedContainer = if (style == FocusStyle.Fill) scheme.inverseSurface else container
     val focusedContent = if (style == FocusStyle.Fill) scheme.inverseOnSurface else scheme.onSurface
     // The ring is centred on its inset, so half of its width goes on top of the gap to keep the gap clear.
     val focusedBorder =
@@ -54,7 +61,7 @@ fun FocusSurface(
         shape = ClickableSurfaceDefaults.shape(shape),
         colors =
             ClickableSurfaceDefaults.colors(
-                containerColor = scheme.surfaceVariant,
+                containerColor = container,
                 contentColor = scheme.onSurface,
                 focusedContainerColor = focusedContainer,
                 focusedContentColor = focusedContent,
@@ -63,6 +70,7 @@ fun FocusSurface(
             ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = focusedScale),
         border = ClickableSurfaceDefaults.border(focusedBorder = focusedBorder),
+        glow = ClickableSurfaceDefaults.glow(focusedGlow = focusedGlow),
         content = content,
     )
 }

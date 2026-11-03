@@ -77,10 +77,15 @@ class HomeScreenTest {
 
     private fun showHome(arranged: Flow<Arranged> = combine(installed, layout, ::arrangeApps)) {
         viewModel =
-            HomeViewModel(arranged, appStyle) {
-                saved += it
-                layout.value = it
-            }
+            HomeViewModel(
+                arranged,
+                appStyle,
+                saveLayout = {
+                    saved += it
+                    layout.value = it
+                },
+                toggleAppStyleSetting = { appStyle.value = appStyle.value.next() },
+            )
         rule.setContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             val callbacks =
@@ -100,7 +105,9 @@ class HomeScreenTest {
                         viewModel.dismiss()
                         calls += "uninstall ${it.label}"
                     },
-                    onOpenSettings = { calls += "settings" },
+                    onOpenSettings = viewModel::openSettings,
+                    onToggleAppStyle = viewModel::toggleAppStyle,
+                    onUnhide = viewModel::unhide,
                     onOpenSystemSettings = { calls += "system settings" },
                 )
             HomeScreen(state = state, time = "20:15", bannerLoader = bannerLoader, callbacks = callbacks)
@@ -391,15 +398,77 @@ class HomeScreenTest {
         assertCardFocused("App 3")
     }
 
-    @Test
-    fun `opens the Stauncher settings on select and the system settings on a long press`() {
-        showHome()
+    private fun openSettings() {
         press(AndroidKeyEvent.KEYCODE_DPAD_UP)
-
         press(AndroidKeyEvent.KEYCODE_DPAD_CENTER)
+    }
+
+    @Test
+    fun `opens the settings sheet on select and the system settings on a long press`() {
+        showHome()
+
+        openSettings()
+        assertEquals(HomeMode.Settings, viewModel.uiState.value.mode)
+        back()
         longPressSelect()
 
-        assertEquals(listOf("settings", "system settings"), calls)
+        assertEquals(listOf("system settings"), calls)
+    }
+
+    @Test
+    fun `focuses the first tile of the settings sheet and closes the sheet with Back`() {
+        showHome()
+
+        openSettings()
+        rule.onNodeWithText("Show apps as").assertIsFocused()
+        back()
+
+        assertEquals(HomeMode.Browsing, viewModel.uiState.value.mode)
+        rule.onNodeWithContentDescription("Settings").assertIsFocused()
+    }
+
+    @Test
+    fun `keeps focus in the settings sheet`() {
+        showHome()
+        openSettings()
+
+        repeat(5) { press(AndroidKeyEvent.KEYCODE_DPAD_DOWN) }
+        rule.onNodeWithText("All settings").assertIsFocused()
+        repeat(5) { press(AndroidKeyEvent.KEYCODE_DPAD_UP) }
+
+        rule.onNodeWithText("Show apps as").assertIsFocused()
+    }
+
+    @Test
+    fun `switches the style from the settings sheet`() {
+        showHome()
+        openSettings()
+
+        press(AndroidKeyEvent.KEYCODE_DPAD_CENTER)
+
+        assertEquals(AppStyle.RoundIcons, viewModel.uiState.value.appStyle)
+        rule.onNodeWithText("Round icons").assertIsDisplayed()
+    }
+
+    @Test
+    fun `focuses the first app when the user goes home from the settings sheet`() {
+        showHome()
+        repeat(2) { press(AndroidKeyEvent.KEYCODE_DPAD_RIGHT) }
+        openSettings()
+
+        goHome()
+
+        assertEquals(HomeMode.Browsing, viewModel.uiState.value.mode)
+        assertCardFocused("App 1")
+    }
+
+    @Test
+    fun `shows the name of the held app on the actions screen`() {
+        showHome()
+
+        openActionsFor(cards = 2)
+
+        rule.onNodeWithText("App 3", useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test

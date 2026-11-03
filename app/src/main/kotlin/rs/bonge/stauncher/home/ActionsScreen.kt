@@ -1,19 +1,17 @@
 package rs.bonge.stauncher.home
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,42 +25,53 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import rs.bonge.stauncher.R
-import rs.bonge.stauncher.apps.ArtKind
 import rs.bonge.stauncher.apps.BannerLoader
 import rs.bonge.stauncher.apps.InstalledApp
+import rs.bonge.stauncher.settings.AppStyle
 import rs.bonge.stauncher.ui.FocusStyle
 import rs.bonge.stauncher.ui.FocusSurface
 
-private val PanelWidth = 360.dp
-private val PanelPadding = 24.dp
-private val PanelCornerRadius = 16.dp
-private val TitleIconSize = 48.dp
-private val ActionHeight = 48.dp
-private val ActionCornerRadius = 8.dp
+// The measurements are those of the "app held" screen of Google TV.
+private val PreviewStart = 127.dp
+private val ContentTop = 124.dp
+private val PreviewWidth = 195.dp
+private val PreviewHeight = 110.dp
+private val PreviewCornerRadius = 12.dp
+private val PreviewLabelGap = 16.dp
+private val ActionsStart = 556.dp
+private val ActionWidth = 268.dp
+private val ActionHeight = 52.dp
+private val ActionGap = 16.dp
+private val ActionTextStart = 24.dp
+private const val FOCUSED_SCALE = 1.05f
+private val FocusedGlow = Glow(elevationColor = Color.Black.copy(alpha = 0.5f), elevation = 12.dp)
 
 /**
- * The actions for one app, centred over the home screen. Focus stays inside it until it closes. App info comes first
- * because Force stop, which only the system can do, is one step further in. Uninstall is offered only for apps the
- * user installed, and Move only when there is another app to swap places with.
+ * The actions for one app, on a screen of their own: the app as it is on the row, with its name below, and a column
+ * of buttons. Focus stays inside the buttons until the screen closes. App info comes first because Force stop, which
+ * only the system can do, is one step further in. Uninstall is offered only for apps the user installed, and Move only
+ * when there is another app to swap places with.
  */
 @Composable
-fun ActionsPanel(
+fun ActionsScreen(
     app: InstalledApp,
+    style: AppStyle,
     canMove: Boolean,
     bannerLoader: BannerLoader,
     onMove: () -> Unit,
@@ -74,35 +83,45 @@ fun ActionsPanel(
     val firstAction = remember { FocusRequester() }
     LaunchedEffect(Unit) { firstAction.requestFocus() }
 
-    // The select press that opened the panel may still be held. Its repeats and its release must not reach the first
-    // action, so select is swallowed until a fresh press begins in the panel.
+    // The select press that opened the screen may still be held. Its repeats and its release must not reach the first
+    // action, so select is swallowed until a fresh press begins here.
     var armed by remember { mutableStateOf(false) }
 
     Box(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.scrim)
+                .background(MaterialTheme.colorScheme.background)
                 .onPreviewKeyEvent { event ->
                     if (!event.isSelect()) return@onPreviewKeyEvent false
                     if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0) armed = true
                     !armed
                 },
-        contentAlignment = Alignment.Center,
     ) {
+        Column(
+            modifier = Modifier.padding(start = PreviewStart, top = ContentTop).width(PreviewWidth),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Preview(app, style, bannerLoader)
+            Text(
+                text = app.label,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 13.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = PreviewLabelGap),
+            )
+        }
         Column(
             modifier =
                 Modifier
-                    .width(PanelWidth)
-                    .clip(RoundedCornerShape(PanelCornerRadius))
-                    .background(colorResource(R.color.panel_surface))
-                    .padding(PanelPadding)
+                    .padding(start = ActionsStart, top = ContentTop)
+                    .width(ActionWidth)
                     .focusProperties { onExit = { cancelFocusChange() } }
                     .focusGroup(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(ActionGap),
         ) {
-            Title(app, bannerLoader)
-            Spacer(Modifier.height(8.dp))
             val actions =
                 buildList {
                     add(stringResource(R.string.action_app_info) to onAppInfo)
@@ -111,7 +130,7 @@ fun ActionsPanel(
                     if (!app.system) add(stringResource(R.string.action_uninstall) to onUninstall)
                 }
             actions.forEachIndexed { index, (text, onClick) ->
-                ActionItem(
+                ActionButton(
                     text = text,
                     onClick = onClick,
                     modifier = if (index == 0) Modifier.focusRequester(firstAction) else Modifier,
@@ -121,42 +140,47 @@ fun ActionsPanel(
     }
 }
 
+/** The app in the style of the row: a round icon, or a banner card. */
 @Composable
-private fun Title(
+private fun Preview(
     app: InstalledApp,
+    style: AppStyle,
     bannerLoader: BannerLoader,
 ) {
-    val iconPx = with(LocalDensity.current) { TitleIconSize.roundToPx() }
-    val icon = rememberArt(app, bannerLoader, iconPx, iconPx, ArtKind.Icon)
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(TitleIconSize)) {
-            icon?.let { Image(bitmap = it, contentDescription = null, modifier = Modifier.size(TitleIconSize)) }
+    val color = MaterialTheme.colorScheme.surfaceVariant
+    if (style == AppStyle.RoundIcons) {
+        Box(Modifier.size(PreviewHeight).clip(CircleShape).background(color)) {
+            RoundIconArt(app, bannerLoader, PreviewHeight)
         }
-        Text(
-            text = app.label,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontSize = 22.sp,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = 16.dp),
-        )
+    } else {
+        Box(
+            Modifier.size(PreviewWidth, PreviewHeight).clip(RoundedCornerShape(PreviewCornerRadius)).background(color),
+        ) {
+            if (app.hasBanner) {
+                BannerArt(app, bannerLoader, PreviewWidth, PreviewHeight)
+            } else {
+                FlatIconArt(app, bannerLoader, PreviewWidth, PreviewHeight)
+            }
+        }
     }
 }
 
 @Composable
-private fun ActionItem(
+private fun ActionButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     FocusSurface(
         onClick = onClick,
-        shape = RoundedCornerShape(ActionCornerRadius),
+        shape = CircleShape,
         style = FocusStyle.Fill,
         modifier = modifier.fillMaxWidth().height(ActionHeight),
+        focusedScale = FOCUSED_SCALE,
+        focusedGlow = FocusedGlow,
     ) {
-        Box(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentAlignment = Alignment.CenterStart) {
-            Text(text = text, fontSize = 18.sp)
+        Box(Modifier.fillMaxSize().padding(start = ActionTextStart), contentAlignment = Alignment.CenterStart) {
+            Text(text = text, fontSize = 20.sp, maxLines = 1)
         }
     }
 }
