@@ -24,6 +24,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import rs.bonge.stauncher.apps.BannerLoader
 import rs.bonge.stauncher.apps.InstalledApp
+import rs.bonge.stauncher.settings.AppStyle
 import android.view.KeyEvent as AndroidKeyEvent
 
 @RunWith(AndroidJUnit4::class)
@@ -31,7 +32,7 @@ class AppRowTest {
     @get:Rule
     val rule = createComposeRule()
 
-    // The packages do not exist, so no art loads and every card is an icon-only card with its name.
+    // The packages do not exist, so no art loads and the cards are empty.
     private val bannerLoader =
         BannerLoader(InstrumentationRegistry.getInstrumentation().targetContext.packageManager)
 
@@ -53,10 +54,12 @@ class AppRowTest {
             )
         }
 
-    private fun showRow() {
+    // Eight banner cards are wider than the screen, so the scrolling tests use them; the round icons have their own.
+    private fun showRow(style: AppStyle = AppStyle.Banners) {
         rule.setContent {
             AppRow(
                 apps = apps,
+                style = style,
                 mode = HomeMode.Browsing,
                 homeRequests = homeRequests,
                 bannerLoader = bannerLoader,
@@ -119,7 +122,7 @@ class AppRowTest {
         repeat(3) { press(AndroidKeyEvent.KEYCODE_DPAD_RIGHT) }
 
         assertFocused("App 4")
-        rule.onNodeWithContentDescription("App 4").assertLeftPositionInRootIsEqualTo(48.dp)
+        rule.onNodeWithContentDescription("App 4").assertLeftPositionInRootIsEqualTo(58.dp)
     }
 
     @Test
@@ -129,8 +132,27 @@ class AppRowTest {
         scrollToLastApp()
 
         assertFocused("App 8")
-        // 8 cards of 192 dp with 16 dp gaps and 48 dp padding make a 1744 dp row in a 960 dp viewport.
-        rule.onNodeWithContentDescription("App 8").assertLeftPositionInRootIsEqualTo(960.dp - 48.dp - 192.dp)
+        // 8 cards of 192 dp with 16 dp gaps and 58 dp margins make a 1764 dp row in a 960 dp viewport.
+        rule.onNodeWithContentDescription("App 8").assertLeftPositionInRootIsEqualTo(960.dp - 58.dp - 192.dp)
+    }
+
+    @Test
+    fun `starts the round icons at the margin and puts them 91 dp apart`() {
+        showRow(AppStyle.RoundIcons)
+
+        rule.onNodeWithContentDescription("App 1").assertLeftPositionInRootIsEqualTo(58.dp)
+        rule.onNodeWithContentDescription("App 2").assertLeftPositionInRootIsEqualTo(58.dp + 91.dp)
+    }
+
+    @Test
+    fun `holds the focused round icon in the pivot slot while a longer row scrolls`() {
+        apps = testApps(14)
+        showRow(AppStyle.RoundIcons)
+
+        repeat(3) { press(AndroidKeyEvent.KEYCODE_DPAD_RIGHT) }
+
+        assertFocused("App 4")
+        rule.onNodeWithContentDescription("App 4").assertLeftPositionInRootIsEqualTo(58.dp)
     }
 
     /** Holds right from the first app until the last one has focus; the extra repeat shows that it stops there. */
@@ -220,7 +242,7 @@ class AppRowTest {
         rule.waitForIdle()
 
         assertFocused("App 1")
-        rule.onNodeWithContentDescription("App 1").assertLeftPositionInRootIsEqualTo(48.dp)
+        rule.onNodeWithContentDescription("App 1").assertLeftPositionInRootIsEqualTo(58.dp)
     }
 
     @Test

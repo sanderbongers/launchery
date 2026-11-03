@@ -13,11 +13,13 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyPress
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -36,6 +38,7 @@ import rs.bonge.stauncher.apps.InstalledApp
 import rs.bonge.stauncher.layout.Arranged
 import rs.bonge.stauncher.layout.Layout
 import rs.bonge.stauncher.layout.arrangeApps
+import rs.bonge.stauncher.settings.AppStyle
 import android.view.KeyEvent as AndroidKeyEvent
 
 /** The home screen with the real view model on fake data: the row, the actions panel, move mode and the top bar. */
@@ -44,12 +47,15 @@ class HomeScreenTest {
     @get:Rule
     val rule = createAndroidComposeRule<ComponentActivity>()
 
-    // The packages do not exist, so no art loads and every card is an icon-only card with its name.
+    // The packages do not exist, so no art loads and the cards are empty.
     private val bannerLoader =
         BannerLoader(InstrumentationRegistry.getInstrumentation().targetContext.packageManager)
 
     private val installed = MutableStateFlow(testApps(5))
     private val layout = MutableStateFlow(Layout())
+
+    // The banner cards are wider than the round icons, so the tests that slide cards at the edge of the screen use them.
+    private val appStyle = MutableStateFlow(AppStyle.Banners)
     private val saved = mutableListOf<Layout>()
     private val calls = mutableListOf<String>()
     private lateinit var viewModel: HomeViewModel
@@ -71,7 +77,7 @@ class HomeScreenTest {
 
     private fun showHome(arranged: Flow<Arranged> = combine(installed, layout, ::arrangeApps)) {
         viewModel =
-            HomeViewModel(arranged) {
+            HomeViewModel(arranged, appStyle) {
                 saved += it
                 layout.value = it
             }
@@ -397,13 +403,46 @@ class HomeScreenTest {
     }
 
     @Test
-    fun `shows the time to the left of the settings button`() {
+    fun `puts the settings button at the left margin and the time at the right margin`() {
         showHome()
 
         rule.onNodeWithText("20:15").assertIsDisplayed()
+        val screen = rule.onRoot().getUnclippedBoundsInRoot()
         val time = rule.onNodeWithText("20:15").getUnclippedBoundsInRoot()
         val settings = rule.onNodeWithContentDescription("Settings").getUnclippedBoundsInRoot()
-        assertTrue("the time ends at ${time.right}, the button starts at ${settings.left}", time.right <= settings.left)
+        assertEquals(58f, settings.left.value, 0.5f)
+        assertEquals((screen.right - 58.dp).value, time.right.value, 0.5f)
+        assertTrue("the button ends at ${settings.right}, the time starts at ${time.left}", settings.right <= time.left)
+    }
+
+    @Test
+    fun `shows the Apps heading above the row and in line with its first app`() {
+        showHome()
+
+        rule.onNodeWithText("Apps").assertIsDisplayed()
+        val heading = rule.onNodeWithText("Apps").getUnclippedBoundsInRoot()
+        val firstApp = rule.onNodeWithContentDescription("App 1").getUnclippedBoundsInRoot()
+        assertEquals(58f, heading.left.value, 0.5f)
+        assertTrue(
+            "the heading ends at ${heading.bottom}, the row starts at ${firstApp.top}",
+            heading.bottom <= firstApp.top,
+        )
+    }
+
+    @Test
+    fun `names every app below its icon in the round style`() {
+        appStyle.value = AppStyle.RoundIcons
+        showHome()
+
+        (1..5).forEach { rule.onNodeWithText("App $it", useUnmergedTree = true).assertIsDisplayed() }
+    }
+
+    @Test
+    fun `names only the focused card in the banner style`() {
+        showHome()
+
+        rule.onNodeWithText("App 1", useUnmergedTree = true).assertIsDisplayed()
+        assertTrue(rule.onAllNodesWithText("App 2", useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
     }
 
     @Test

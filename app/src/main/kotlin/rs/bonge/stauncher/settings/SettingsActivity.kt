@@ -24,6 +24,7 @@ class SettingsActivity : ComponentActivity() {
                     state = state,
                     bannerLoader = container.bannerLoader,
                     onUnhide = viewModel::unhide,
+                    onToggleAppStyle = viewModel::toggleAppStyle,
                     onOpenSystemSettings = ::openSystemSettings,
                 )
             }

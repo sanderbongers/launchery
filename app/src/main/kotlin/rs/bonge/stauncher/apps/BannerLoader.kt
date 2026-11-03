@@ -3,16 +3,35 @@ package rs.bonge.stauncher.apps
 import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Path
+import android.graphics.drawable.AdaptiveIconDrawable
+import android.graphics.drawable.Drawable
 import android.util.LruCache
 import androidx.core.graphics.applyCanvas
 import androidx.core.graphics.createBitmap
+import androidx.core.graphics.withClip
+import androidx.palette.graphics.Palette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 
-/**
- * Renders an app's banner, or its icon when it has no banner, at the size the card needs. With `iconOnly` it renders
- * the icon even for an app that has a banner, for the places that show an app small.
- */
+/** What the loader draws for an app. */
+enum class ArtKind {
+    /** The banner, or the icon for an app that has no banner. */
+    Banner,
+
+    /** The icon, even for an app that has a banner, for the places that show an app small. */
+    Icon,
+
+    /** The icon cut to a circle. Nothing outside the circle is drawn, so the surface it sits on shows around the icon. */
+    RoundIcon,
+}
+
+// A flat icon is square, and a square only fits inside a circle at about 70% of its width. Some room is left around it.
+private const val FLAT_ICON_INSET = 0.175f
+
+/** Renders an app's banner or icon at the size the screen needs. */
 class BannerLoader(
     private val packageManager: PackageManager,
 ) {
@@ -22,7 +41,7 @@ class BannerLoader(
         val lastUpdateTime: Long,
         val width: Int,
         val height: Int,
-        val iconOnly: Boolean,
+        val kind: ArtKind,
     )
 
     private val cache =
@@ -37,38 +56,66 @@ class BannerLoader(
         app: InstalledApp,
         width: Int,
         height: Int,
-        iconOnly: Boolean = false,
-    ): Bitmap? = cache[key(app, width, height, iconOnly)]
+        kind: ArtKind = ArtKind.Banner,
+    ): Bitmap? = cache[key(app, width, height, kind)]
 
     suspend fun load(
         app: InstalledApp,
         width: Int,
         height: Int,
-        iconOnly: Boolean = false,
+        kind: ArtKind = ArtKind.Banner,
     ): Bitmap? {
-        peek(app, width, height, iconOnly)?.let { return it }
-        val bitmap = withContext(Dispatchers.IO) { render(app, width, height, iconOnly) } ?: return null
-        cache.put(key(app, width, height, iconOnly), bitmap)
+        peek(app, width, height, kind)?.let { return it }
+        val bitmap = withContext(Dispatchers.IO) { render(app, width, height, kind) } ?: return null
+        cache.put(key(app, width, height, kind), bitmap)
         return bitmap
+    }
+
+    // The glow colour does not depend on the size of the art, so it is read from one small rendering. [NO_GLOW] marks
+    // art without a colour, which is worth remembering too.
+    private val glowColors = ConcurrentHashMap<Key, Int>()
+
+    /**
+     * The most vivid colour of the app's art as an opaque ARGB value, or null for art that has no colour, like a white or
+     * grey logo. The colour is worked out once per app and kind of art.
+     */
+    suspend fun glowColor(
+        app: InstalledApp,
+        kind: ArtKind,
+    ): Int? {
+        val key = key(app, GLOW_ART_SIZE, GLOW_ART_SIZE, kind)
+        val color =
+            glowColors[key] ?: run {
+                val bitmap = load(app, GLOW_ART_SIZE, GLOW_ART_SIZE, kind) ?: return null
+                val found = withContext(Dispatchers.Default) { vividColor(bitmap) } ?: NO_GLOW
+                found.also { glowColors[key] = it }
+            }
+        return color.takeIf { it != NO_GLOW }
+    }
+
+    private fun vividColor(bitmap: Bitmap): Int? {
+        val palette = Palette.from(bitmap).generate()
+        val swatch = palette.vibrantSwatch ?: palette.lightVibrantSwatch ?: palette.darkVibrantSwatch
+        return swatch?.rgb
     }
 
     private fun key(
         app: InstalledApp,
         width: Int,
         height: Int,
-        iconOnly: Boolean,
-    ) = Key(app.packageName, app.lastUpdateTime, width, height, iconOnly)
+        kind: ArtKind,
+    ) = Key(app.packageName, app.lastUpdateTime, width, height, kind)
 
     private fun render(
         app: InstalledApp,
         width: Int,
         height: Int,
-        iconOnly: Boolean,
+        kind: ArtKind,
     ): Bitmap? {
         val component = ComponentName(app.packageName, app.className)
         val drawable =
             try {
-                if (app.hasBanner && !iconOnly) {
+                if (app.hasBanner && kind == ArtKind.Banner) {
                     packageManager.getActivityBanner(component)
                 } else {
                     packageManager.getActivityIcon(component)
@@ -77,12 +124,34 @@ class BannerLoader(
                 null
             } ?: return null
         return createBitmap(width, height).applyCanvas {
-            drawable.setBounds(0, 0, width, height)
+            if (kind == ArtKind.RoundIcon) {
+                drawRoundIcon(drawable, width)
+            } else {
+                drawable.setBounds(0, 0, width, height)
+                drawable.draw(this)
+            }
+        }
+    }
+
+    // An adaptive icon fills the circle with its own background. A flat icon is set in the middle, on whatever is
+    // behind the circle.
+    private fun Canvas.drawRoundIcon(
+        drawable: Drawable,
+        size: Int,
+    ) {
+        val circle = Path().apply { addCircle(size / 2f, size / 2f, size / 2f, Path.Direction.CW) }
+        withClip(circle) {
+            val inset = if (drawable is AdaptiveIconDrawable) 0 else (size * FLAT_ICON_INSET).toInt()
+            drawable.setBounds(inset, inset, size - inset, size - inset)
             drawable.draw(this)
         }
     }
 
     private companion object {
         const val CACHE_BYTES = 8 * 1024 * 1024
+        const val GLOW_ART_SIZE = 64
+
+        // A swatch is opaque, so 0, which is transparent black, can never be one.
+        const val NO_GLOW = 0
     }
 }

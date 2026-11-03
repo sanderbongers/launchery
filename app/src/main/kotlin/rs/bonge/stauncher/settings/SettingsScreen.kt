@@ -37,6 +37,7 @@ import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import rs.bonge.stauncher.R
+import rs.bonge.stauncher.apps.ArtKind
 import rs.bonge.stauncher.apps.BannerLoader
 import rs.bonge.stauncher.apps.InstalledApp
 import rs.bonge.stauncher.home.rememberArt
@@ -56,15 +57,16 @@ private const val SECONDARY_ALPHA = 0.7f
 private enum class Page { Main, HiddenApps }
 
 /**
- * The settings: a main page with a link to the system settings and one to the hidden apps, and the hidden apps page,
- * where select puts an app back on the home row. Back on the hidden apps page returns to the main page, with focus on
- * the row that led there.
+ * The settings: a main page with a link to the system settings, one to the hidden apps and the choice of how to show
+ * the apps, and the hidden apps page, where select puts an app back on the home row. Back on the hidden apps page
+ * returns to the main page, with focus on the row that led there.
  */
 @Composable
 fun SettingsScreen(
     state: SettingsUiState,
     bannerLoader: BannerLoader,
     onUnhide: (InstalledApp) -> Unit,
+    onToggleAppStyle: () -> Unit,
     onOpenSystemSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -85,7 +87,9 @@ fun SettingsScreen(
         when (page) {
             Page.Main -> {
                 MainPage(
+                    appStyle = state.appStyle,
                     focusHiddenApps = cameBack,
+                    onToggleAppStyle = onToggleAppStyle,
                     onOpenSystemSettings = onOpenSystemSettings,
                     onOpenHiddenApps = {
                         cameBack = false
@@ -103,7 +107,9 @@ fun SettingsScreen(
 
 @Composable
 private fun MainPage(
+    appStyle: AppStyle,
     focusHiddenApps: Boolean,
+    onToggleAppStyle: () -> Unit,
     onOpenSystemSettings: () -> Unit,
     onOpenHiddenApps: () -> Unit,
 ) {
@@ -119,8 +125,24 @@ private fun MainPage(
         SettingsRow(onClick = onOpenHiddenApps, modifier = Modifier.focusRequester(hiddenAppsFocus)) {
             RowLabel(stringResource(R.string.hidden_apps))
         }
+        SettingsRow(onClick = onToggleAppStyle) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RowLabel(stringResource(R.string.show_apps_as), Modifier.weight(1f))
+                Text(
+                    text = stringResource(appStyle.labelRes()),
+                    color = LocalContentColor.current.copy(alpha = SECONDARY_ALPHA),
+                    fontSize = 16.sp,
+                )
+            }
+        }
     }
 }
+
+private fun AppStyle.labelRes() =
+    when (this) {
+        AppStyle.RoundIcons -> R.string.style_round_icons
+        AppStyle.Banners -> R.string.style_banners
+    }
 
 /**
  * After an app is unhidden focus stays at the same place in the list. When the list is empty there is nothing left to
@@ -181,8 +203,11 @@ private fun PageTitle(text: String) {
 }
 
 @Composable
-private fun RowLabel(text: String) {
-    Text(text = text, fontSize = 18.sp)
+private fun RowLabel(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(text = text, fontSize = 18.sp, modifier = modifier)
 }
 
 @Composable
@@ -193,7 +218,7 @@ private fun HiddenAppRow(
     modifier: Modifier = Modifier,
 ) {
     val iconPx = with(LocalDensity.current) { RowIconSize.roundToPx() }
-    val icon = rememberArt(app, bannerLoader, iconPx, iconPx, iconOnly = true)
+    val icon = rememberArt(app, bannerLoader, iconPx, iconPx, ArtKind.Icon)
     SettingsRow(onClick = onClick, modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(RowIconSize)) {

@@ -1,6 +1,7 @@
 package rs.bonge.stauncher.home
 
 import rs.bonge.stauncher.apps.InstalledApp
+import rs.bonge.stauncher.settings.AppStyle
 
 /**
  * [apps] are the visible apps in the order to draw; while an app is being moved this is the preview order. [loaded]
@@ -12,6 +13,7 @@ data class HomeUiState(
     val loaded: Boolean = false,
     val mode: HomeMode = HomeMode.Browsing,
     val homeRequests: Int = 0,
+    val appStyle: AppStyle = AppStyle.RoundIcons,
 )
 
 sealed interface HomeMode {

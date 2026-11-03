@@ -4,12 +4,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
@@ -36,19 +36,19 @@ import androidx.tv.material3.Text
 import rs.bonge.stauncher.R
 import rs.bonge.stauncher.ui.FocusStyle
 import rs.bonge.stauncher.ui.FocusSurface
+import rs.bonge.stauncher.ui.ScreenMargin
 
-private val BarHorizontalPadding = 48.dp
 private val BarVerticalPadding = 27.dp
 private val ButtonSize = 48.dp
 private val ButtonIconSize = 24.dp
-private val ClockGap = 24.dp
 private val LabelAreaHeight = 32.dp
 private val LabelTopGap = 12.dp
 private const val FOCUSED_SCALE = 1.1f
 
 /**
- * The top bar, reached with up from the row: the [time], and the settings button at the far right. While [focusable] is
- * false nothing in the bar can take focus, so the first focus does not land here before the row has its apps.
+ * The top bar, reached with up from the row: the settings button at the far left and the [time] at the far right. While
+ * [focusable] is false nothing in the bar can take focus, so the first focus does not land here before the row has its
+ * apps.
  */
 @Composable
 fun TopBar(
@@ -63,15 +63,14 @@ fun TopBar(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = BarHorizontalPadding, vertical = BarVerticalPadding)
+                .padding(horizontal = ScreenMargin, vertical = BarVerticalPadding)
                 .focusProperties { canFocus = focusable },
-        horizontalArrangement = Arrangement.End,
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
+        SettingsButton(onOpenSettings, onOpenSystemSettings, Modifier.focusRequester(settingsFocus))
         Box(Modifier.height(ButtonSize), contentAlignment = Alignment.Center) {
             Text(text = time, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 20.sp, maxLines = 1)
         }
-        Spacer(Modifier.width(ClockGap))
-        SettingsButton(onOpenSettings, onOpenSystemSettings, Modifier.focusRequester(settingsFocus))
     }
 }
 
@@ -88,7 +87,7 @@ private fun SettingsButton(
     var focused by remember { mutableStateOf(false) }
     val label = stringResource(R.string.settings)
 
-    Column(horizontalAlignment = Alignment.End) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         FocusSurface(
             onClick = onOpenSettings,
             onLongClick = onOpenSystemSettings,
@@ -110,12 +109,20 @@ private fun SettingsButton(
                 )
             }
         }
+        // The label is wider than the button; it spills over both sides, so that the button does not move when it shows.
         Box(
-            modifier = Modifier.height(LabelAreaHeight).padding(top = LabelTopGap),
-            contentAlignment = Alignment.TopEnd,
+            modifier = Modifier.width(ButtonSize).height(LabelAreaHeight).padding(top = LabelTopGap),
+            contentAlignment = Alignment.TopCenter,
         ) {
             if (focused) {
-                Text(text = label, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, maxLines = 1)
+                Text(
+                    text = label,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier.wrapContentWidth(unbounded = true),
+                )
             }
         }
     }

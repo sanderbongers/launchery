@@ -1,13 +1,14 @@
 package rs.bonge.stauncher.home
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,34 +27,58 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import rs.bonge.stauncher.apps.ArtKind
 import rs.bonge.stauncher.apps.BannerLoader
 import rs.bonge.stauncher.apps.InstalledApp
+import rs.bonge.stauncher.settings.AppStyle
 import rs.bonge.stauncher.ui.FocusStyle
 import rs.bonge.stauncher.ui.FocusSurface
 
-internal val CardWidth = 192.dp
-internal val CardHeight = 108.dp
-private val CardCornerRadius = 12.dp
-private val IconSize = 48.dp
-private val LabelAreaHeight = 32.dp
+private val BannerWidth = 192.dp
+private val BannerHeight = 108.dp
+private val BannerGap = 16.dp
+private val BannerCornerRadius = 12.dp
+private val FlatIconSize = 48.dp
+private val RoundIconSize = 76.dp
+private val RoundIconGap = 15.dp
 private val LabelTopGap = 12.dp
+private val BannerLabelAreaHeight = 32.dp
+private val RoundLabelAreaHeight = 48.dp
 private const val FOCUSED_SCALE = 1.1f
 private const val LIFTED_SCALE = 1.2f
 
+/** The width of one item in the row, and the gap to the next one. */
+internal fun AppStyle.itemWidth(): Dp =
+    when (this) {
+        AppStyle.RoundIcons -> RoundIconSize
+        AppStyle.Banners -> BannerWidth
+    }
+
+internal fun AppStyle.itemGap(): Dp =
+    when (this) {
+        AppStyle.RoundIcons -> RoundIconGap
+        AppStyle.Banners -> BannerGap
+    }
+
+// A round icon's name is as wide as the pitch of the row, so that the names of neighbours meet but do not overlap.
+private val RoundLabelWidth = RoundIconSize + RoundIconGap
+
 /**
- * A banner card shows its name below it while focused. An icon-only card, for an app without a banner, shows its name
- * inside the card at all times. A [lifted] card, one that is being moved, grows a little further than a focused one.
- * [itemModifier] goes on the outermost layout, where a lazy list reads its item modifiers; [modifier] goes on the
- * focusable card.
+ * An app in the row. In the round style every app is an icon with its name below it. In the banner style the name shows
+ * below the focused card only, and an app without a banner has its icon on a plain card. A [lifted] card, one that is
+ * being moved, grows a little further than a focused one. [itemModifier] goes on the outermost layout, where a lazy list
+ * reads its item modifiers; [modifier] goes on the focusable surface.
  */
 @Composable
 fun AppCard(
     app: InstalledApp,
+    style: AppStyle,
     bannerLoader: BannerLoader,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
@@ -62,45 +87,84 @@ fun AppCard(
     itemModifier: Modifier = Modifier,
 ) {
     var focused by remember { mutableStateOf(false) }
+    val round = style == AppStyle.RoundIcons
 
     Column(
         // A lifted card grows past the gap to its neighbours, so it is drawn over them.
-        modifier = itemModifier.width(CardWidth).zIndex(if (lifted) 1f else 0f),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = itemModifier.width(style.itemWidth()).zIndex(if (lifted) 1f else 0f),
+        horizontalAlignment = if (round) Alignment.CenterHorizontally else Alignment.Start,
     ) {
         FocusSurface(
             onClick = onClick,
             onLongClick = onLongClick,
-            shape = RoundedCornerShape(CardCornerRadius),
+            shape = if (round) CircleShape else RoundedCornerShape(BannerCornerRadius),
             style = FocusStyle.Ring,
             modifier =
                 modifier
-                    .size(CardWidth, CardHeight)
+                    .size(style.itemWidth(), if (round) RoundIconSize else BannerHeight)
                     .onFocusChanged { focused = it.isFocused }
                     .semantics { contentDescription = app.label },
             focusedScale = if (lifted) LIFTED_SCALE else FOCUSED_SCALE,
         ) {
-            if (app.hasBanner) {
-                BannerArt(app, bannerLoader)
-            } else {
-                IconAndName(app, bannerLoader)
+            when {
+                round -> RoundIconArt(app, bannerLoader)
+                app.hasBanner -> BannerArt(app, bannerLoader)
+                else -> FlatIconArt(app, bannerLoader)
             }
         }
-        Box(
-            modifier = Modifier.height(LabelAreaHeight).padding(top = LabelTopGap),
-            contentAlignment = Alignment.TopCenter,
-        ) {
-            if (app.hasBanner && focused) {
-                Text(
-                    text = app.label,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 14.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+        if (round) RoundLabel(app.label, focused) else BannerLabel(app.label, focused)
+    }
+}
+
+@Composable
+private fun RoundLabel(
+    label: String,
+    focused: Boolean,
+) {
+    Box(
+        modifier = Modifier.width(RoundIconSize).height(RoundLabelAreaHeight).padding(top = LabelTopGap),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Text(
+            text = label,
+            color = if (focused) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 12.sp,
+            // Two lines have to fit the label area; the line height of a font may be taller than it is in Roboto.
+            lineHeight = 16.sp,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.requiredWidth(RoundLabelWidth).padding(horizontal = 3.dp),
+        )
+    }
+}
+
+@Composable
+private fun BannerLabel(
+    label: String,
+    focused: Boolean,
+) {
+    Box(Modifier.height(BannerLabelAreaHeight).padding(top = LabelTopGap)) {
+        if (focused) {
+            Text(
+                text = label,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 14.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
+}
+
+@Composable
+private fun RoundIconArt(
+    app: InstalledApp,
+    bannerLoader: BannerLoader,
+) {
+    val sizePx = with(LocalDensity.current) { RoundIconSize.roundToPx() }
+    val art = rememberArt(app, bannerLoader, sizePx, sizePx, ArtKind.RoundIcon)
+    art?.let { Image(bitmap = it, contentDescription = null, modifier = Modifier.size(RoundIconSize)) }
 }
 
 @Composable
@@ -109,43 +173,28 @@ private fun BannerArt(
     bannerLoader: BannerLoader,
 ) {
     val density = LocalDensity.current
-    val widthPx = with(density) { CardWidth.roundToPx() }
-    val heightPx = with(density) { CardHeight.roundToPx() }
+    val widthPx = with(density) { BannerWidth.roundToPx() }
+    val heightPx = with(density) { BannerHeight.roundToPx() }
     val art = rememberArt(app, bannerLoader, widthPx, heightPx)
     art?.let {
         Image(
             bitmap = it,
             contentDescription = null,
-            modifier = Modifier.size(CardWidth, CardHeight),
+            modifier = Modifier.size(BannerWidth, BannerHeight),
             contentScale = ContentScale.FillBounds,
         )
     }
 }
 
 @Composable
-private fun IconAndName(
+private fun FlatIconArt(
     app: InstalledApp,
     bannerLoader: BannerLoader,
 ) {
-    val iconPx = with(LocalDensity.current) { IconSize.roundToPx() }
-    val icon = rememberArt(app, bannerLoader, iconPx, iconPx)
-    Column(
-        modifier = Modifier.size(CardWidth, CardHeight).padding(horizontal = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Box(Modifier.size(IconSize)) {
-            icon?.let { Image(bitmap = it, contentDescription = null, modifier = Modifier.size(IconSize)) }
-        }
-        Text(
-            text = app.label,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontSize = 14.sp,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 6.dp),
-        )
+    val iconPx = with(LocalDensity.current) { FlatIconSize.roundToPx() }
+    val icon = rememberArt(app, bannerLoader, iconPx, iconPx, ArtKind.Icon)
+    Box(Modifier.size(BannerWidth, BannerHeight), contentAlignment = Alignment.Center) {
+        icon?.let { Image(bitmap = it, contentDescription = null, modifier = Modifier.size(FlatIconSize)) }
     }
 }
 
@@ -155,17 +204,17 @@ internal fun rememberArt(
     bannerLoader: BannerLoader,
     widthPx: Int,
     heightPx: Int,
-    iconOnly: Boolean = false,
+    kind: ArtKind = ArtKind.Banner,
 ): ImageBitmap? {
     val bitmap by produceState(
-        initialValue = bannerLoader.peek(app, widthPx, heightPx, iconOnly),
+        initialValue = bannerLoader.peek(app, widthPx, heightPx, kind),
         app.packageName,
         app.lastUpdateTime,
         widthPx,
         heightPx,
-        iconOnly,
+        kind,
     ) {
-        value = bannerLoader.load(app, widthPx, heightPx, iconOnly)
+        value = bannerLoader.load(app, widthPx, heightPx, kind)
     }
     return remember(bitmap) { bitmap?.asImageBitmap() }
 }

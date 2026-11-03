@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -20,6 +21,7 @@ import rs.bonge.stauncher.apps.testApp
 import rs.bonge.stauncher.layout.Arranged
 import rs.bonge.stauncher.layout.Layout
 import rs.bonge.stauncher.layout.arrangeApps
+import rs.bonge.stauncher.settings.AppStyle
 import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -33,6 +35,7 @@ class HomeViewModelTest {
 
     private val installed = MutableStateFlow(listOf(a, b, c))
     private val layout = MutableStateFlow(Layout())
+    private val appStyle = MutableStateFlow(AppStyle.RoundIcons)
     private val saved = mutableListOf<Layout>()
 
     // Saving feeds back into the layout, like the real repository does.
@@ -42,7 +45,7 @@ class HomeViewModelTest {
             layout.value = it
         },
     ): HomeViewModel {
-        val viewModel = HomeViewModel(combine(installed, layout, ::arrangeApps), save)
+        val viewModel = HomeViewModel(combine(installed, layout, ::arrangeApps), appStyle, save)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         return viewModel
     }
@@ -52,7 +55,28 @@ class HomeViewModelTest {
     @Test
     fun `is not loaded until the apps and the layout are known`() =
         runTest {
-            val viewModel = HomeViewModel(MutableSharedFlow<Arranged>()) {}
+            val viewModel = HomeViewModel(MutableSharedFlow<Arranged>(), appStyle) {}
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
+
+            assertEquals(HomeUiState(), viewModel.uiState.value)
+        }
+
+    @Test
+    fun `follows the style the user chose`() =
+        runTest {
+            appStyle.value = AppStyle.Banners
+            val viewModel = viewModel()
+            assertEquals(AppStyle.Banners, viewModel.uiState.value.appStyle)
+
+            appStyle.value = AppStyle.RoundIcons
+
+            assertEquals(AppStyle.RoundIcons, viewModel.uiState.value.appStyle)
+        }
+
+    @Test
+    fun `is not loaded until the style is known, so the row never shows the wrong style first`() =
+        runTest {
+            val viewModel = HomeViewModel(combine(installed, layout, ::arrangeApps), emptyFlow()) {}
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
 
             assertEquals(HomeUiState(), viewModel.uiState.value)
@@ -82,7 +106,7 @@ class HomeViewModelTest {
     fun `observes the apps only while the UI collects the state`() =
         runTest {
             val upstream = MutableSharedFlow<Arranged>()
-            val viewModel = HomeViewModel(upstream) {}
+            val viewModel = HomeViewModel(upstream, appStyle) {}
             assertEquals(0, upstream.subscriptionCount.value)
 
             val collector = launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }

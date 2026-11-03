@@ -20,4 +20,8 @@
     <string name="no_hidden_apps">No hidden apps</string>
     <string name="hidden_apps">Hidden apps</string>
     <string name="unhide">Unhide</string>
+    <string name="apps">Apps</string>
+    <string name="show_apps_as">Show apps as</string>
+    <string name="style_round_icons">Round icons</string>
+    <string name="style_banners">Banners</string>
 </resources>

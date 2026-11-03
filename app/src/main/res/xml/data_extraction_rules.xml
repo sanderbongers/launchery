@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
-    <!-- Only the saved layout is backed up; an include leaves everything else out. -->
+    <!-- Only what the user arranged and chose is backed up; an include leaves everything else out. -->
     <cloud-backup>
         <include domain="file" path="datastore/layout.json" />
+        <include domain="file" path="datastore/settings.json" />
     </cloud-backup>
     <device-transfer>
         <include domain="file" path="datastore/layout.json" />
+        <include domain="file" path="datastore/settings.json" />
     </device-transfer>
 </data-extraction-rules>

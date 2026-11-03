@@ -16,35 +16,34 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.offset
+import kotlinx.coroutines.flow.collectLatest
 import rs.bonge.stauncher.apps.BannerLoader
 import rs.bonge.stauncher.apps.InstalledApp
-
-private val RowPadding = 48.dp
-private val CardSpacing = 16.dp
+import rs.bonge.stauncher.settings.AppStyle
+import rs.bonge.stauncher.ui.ScreenMargin
 
 // Room for the focused card's scale and border, which the row would otherwise clip.
 private val RowVerticalPadding = 16.dp
-
-// Moving a card makes the row jump a place, and only the cards that were composed before can slide to their new
-// places. So the row is laid out this much wider on both sides of the screen, and the card that slides into view or out
-// of it is already there.
-private val SlideMargin = CardWidth + CardSpacing
 
 /** Which app had focus last. Plain fields, so that reading them in composition does not subscribe to them. */
 private class FocusTracker {
@@ -63,6 +62,7 @@ private class FocusTracker {
 @Composable
 fun AppRow(
     apps: List<InstalledApp>,
+    style: AppStyle,
     mode: HomeMode,
     homeRequests: Int,
     bannerLoader: BannerLoader,
@@ -71,9 +71,14 @@ fun AppRow(
     onMoveBy: (Int) -> Unit,
     onDrop: () -> Unit,
     modifier: Modifier = Modifier,
+    glow: GlowState = rememberGlowState(),
 ) {
     val listState = rememberLazyListState()
-    val pivotPx = with(LocalDensity.current) { (SlideMargin + RowPadding).toPx() }
+    // Moving a card makes the row jump a place, and only the cards that were composed before can slide to their new
+    // places. So the row is laid out this much wider on both sides of the screen, and the card that slides into view or
+    // out of it is already there.
+    val slideMargin = style.itemWidth() + style.itemGap()
+    val pivotPx = with(LocalDensity.current) { (slideMargin + ScreenMargin).toPx() }
     val tracker = remember { FocusTracker() }
     val breakThrough = remember { BreakThrough() }
     var pendingFocus by remember { mutableStateOf<Int?>(null) }
@@ -111,6 +116,15 @@ fun AppRow(
     LaunchedEffect(pendingFocus) {
         pendingFocus?.let { listState.scrollToItem(it) }
     }
+    // The glow takes the colour of the app that has focus, and fades away when focus leaves the row. The focused app is
+    // read outside composition: a recomposition on every focus change would disturb the focus handling above.
+    var focusedApp by remember { mutableStateOf<InstalledApp?>(null) }
+    LaunchedEffect(style) {
+        snapshotFlow { focusedApp }.collectLatest { app ->
+            val color = app?.let { bannerLoader.glowColor(it, artKindFor(it, style)) }
+            glow.fadeTo(color?.let(::Color))
+        }
+    }
     // The moved card keeps focus, but its index changes, and it may leave the screen.
     val movingPackage = (mode as? HomeMode.Moving)?.app?.packageName
     val movingIndex = apps.indexOfFirst { it.packageName == movingPackage }
@@ -127,26 +141,30 @@ fun AppRow(
         LazyRow(
             state = listState,
             modifier =
-                modifier.extendBeyondScreen(SlideMargin).focusRestorer().onPreviewKeyEvent { event ->
+                modifier.extendBeyondScreen(slideMargin).focusRestorer().onPreviewKeyEvent { event ->
                     if (movingPackage != null) {
                         handleMoveKey(event, onMoveBy, onDrop)
                     } else {
                         breakThrough.handle(event, tracker.index, apps.lastIndex) { pendingFocus = it }
                     }
                 },
-            contentPadding = PaddingValues(horizontal = SlideMargin + RowPadding, vertical = RowVerticalPadding),
-            horizontalArrangement = Arrangement.spacedBy(CardSpacing),
+            contentPadding = PaddingValues(horizontal = slideMargin + ScreenMargin, vertical = RowVerticalPadding),
+            horizontalArrangement = Arrangement.spacedBy(style.itemGap()),
         ) {
             itemsIndexed(apps, key = { _, app -> app.packageName }) { index, app ->
                 val focusRequester = remember { FocusRequester() }
                 if (pendingFocus == index) {
                     LaunchedEffect(Unit) {
                         focusRequester.requestFocus()
+                        // When focus comes from outside the row, its focus restorer first gives it to the app that had
+                        // it last. The second request moves it on to this app.
+                        focusRequester.requestFocus()
                         pendingFocus = null
                     }
                 }
                 AppCard(
                     app = app,
+                    style = style,
                     bannerLoader = bannerLoader,
                     onClick = { onLaunch(app) },
                     onLongClick = { onOpenActions(app) },
@@ -160,7 +178,12 @@ fun AppRow(
                                 if (it.isFocused) {
                                     tracker.index = index
                                     tracker.packageName = app.packageName
+                                    focusedApp = app
+                                } else if (focusedApp?.packageName == app.packageName) {
+                                    focusedApp = null
                                 }
+                            }.onGloballyPositioned {
+                                if (focusedApp?.packageName == app.packageName) glow.center = it.boundsInRoot().center
                             },
                 )
             }

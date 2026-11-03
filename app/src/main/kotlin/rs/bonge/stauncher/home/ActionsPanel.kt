@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import rs.bonge.stauncher.R
+import rs.bonge.stauncher.apps.ArtKind
 import rs.bonge.stauncher.apps.BannerLoader
 import rs.bonge.stauncher.apps.InstalledApp
 import rs.bonge.stauncher.ui.FocusStyle
@@ -126,7 +127,7 @@ private fun Title(
     bannerLoader: BannerLoader,
 ) {
     val iconPx = with(LocalDensity.current) { TitleIconSize.roundToPx() }
-    val icon = rememberArt(app, bannerLoader, iconPx, iconPx, iconOnly = true)
+    val icon = rememberArt(app, bannerLoader, iconPx, iconPx, ArtKind.Icon)
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(TitleIconSize)) {
             icon?.let { Image(bitmap = it, contentDescription = null, modifier = Modifier.size(TitleIconSize)) }

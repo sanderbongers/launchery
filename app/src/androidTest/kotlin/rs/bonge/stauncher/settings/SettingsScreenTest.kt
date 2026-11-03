@@ -60,6 +60,7 @@ class SettingsScreenTest {
                     calls += "unhide ${app.label}"
                     state = state.copy(hidden = state.hidden - app)
                 },
+                onToggleAppStyle = { calls += "toggle style" },
                 onOpenSystemSettings = { calls += "all settings" },
             )
         }
@@ -100,6 +101,27 @@ class SettingsScreenTest {
         press(AndroidKeyEvent.KEYCODE_DPAD_CENTER)
 
         assertEquals(listOf("all settings"), calls)
+    }
+
+    @Test
+    fun `names the style the apps are shown in and switches it on select`() {
+        showSettings()
+        rule.onNodeWithText("Show apps as").assertIsDisplayed()
+        rule.onNodeWithText("Round icons").assertIsDisplayed()
+
+        repeat(2) { press(AndroidKeyEvent.KEYCODE_DPAD_DOWN) }
+        rule.onNodeWithText("Show apps as").assertIsFocused()
+        press(AndroidKeyEvent.KEYCODE_DPAD_CENTER)
+
+        assertEquals(listOf("toggle style"), calls)
+    }
+
+    @Test
+    fun `names the banner style when that is in use`() {
+        state = state.copy(appStyle = AppStyle.Banners)
+        showSettings()
+
+        rule.onNodeWithText("Banners").assertIsDisplayed()
     }
 
     @Test

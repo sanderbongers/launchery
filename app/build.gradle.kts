@@ -86,6 +86,7 @@ dependencies {
     implementation(libs.androidx.datastore)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.palette)
     implementation(libs.androidx.profileinstaller)
     implementation(libs.androidx.tv.material)
     implementation(libs.kotlinx.serialization.json)

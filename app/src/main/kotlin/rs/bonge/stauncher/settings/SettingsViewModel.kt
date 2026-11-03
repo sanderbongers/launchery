@@ -8,7 +8,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import rs.bonge.stauncher.StauncherApplication
@@ -24,19 +24,32 @@ private val byName = compareBy<InstalledApp, String>(Collator.getInstance()) { i
 /** [loaded] tells an empty list from one that has not been read yet. */
 data class SettingsUiState(
     val hidden: List<InstalledApp> = emptyList(),
+    val appStyle: AppStyle = AppStyle.RoundIcons,
     val loaded: Boolean = false,
 )
 
 class SettingsViewModel(
     arranged: Flow<Arranged>,
+    appStyle: Flow<AppStyle>,
     private val saveLayout: suspend (Layout) -> Unit,
+    private val saveAppStyleToggle: suspend () -> Unit,
 ) : ViewModel() {
     private val latest: StateFlow<Arranged?> = arranged.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
 
     val uiState: StateFlow<SettingsUiState> =
-        latest
-            .map { SettingsUiState(it?.hidden.orEmpty().sortedWith(byName), loaded = it != null) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), SettingsUiState())
+        combine(latest, appStyle) { arranged, style ->
+            SettingsUiState(arranged?.hidden.orEmpty().sortedWith(byName), style, loaded = arranged != null)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), SettingsUiState())
+
+    fun toggleAppStyle() {
+        viewModelScope.launch {
+            try {
+                saveAppStyleToggle()
+            } catch (_: IOException) {
+                // The style stays as it was.
+            }
+        }
+    }
 
     fun unhide(app: InstalledApp) {
         val arranged = latest.value ?: return
@@ -54,7 +67,12 @@ class SettingsViewModel(
             viewModelFactory {
                 initializer {
                     val container = (this[APPLICATION_KEY] as StauncherApplication).container
-                    SettingsViewModel(container.arrangedApps, container.layoutRepository::save)
+                    SettingsViewModel(
+                        container.arrangedApps,
+                        container.settingsRepository.appStyle,
+                        container.layoutRepository::save,
+                        container.settingsRepository::toggleAppStyle,
+                    )
                 }
             }
     }

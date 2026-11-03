@@ -3,6 +3,7 @@ package rs.bonge.stauncher.home
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -23,6 +24,9 @@ import androidx.tv.material3.Text
 import rs.bonge.stauncher.R
 import rs.bonge.stauncher.apps.BannerLoader
 import rs.bonge.stauncher.apps.InstalledApp
+import rs.bonge.stauncher.ui.ScreenMargin
+
+private val HeadingSize = 28.sp
 
 /** What the home screen asks of its host. */
 class HomeCallbacks(
@@ -78,7 +82,8 @@ fun HomeScreen(
     val rowEmpty = state.loaded && state.apps.isEmpty()
     LaunchedEffect(rowEmpty) { if (rowEmpty) settingsFocus.requestFocus() }
 
-    Box(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    val glow = rememberGlowState()
+    Box(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).glow(glow)) {
         TopBar(
             time = time,
             onOpenSettings = callbacks.onOpenSettings,
@@ -95,17 +100,28 @@ fun HomeScreen(
                 modifier = Modifier.align(Alignment.Center),
             )
         } else {
-            AppRow(
-                apps = state.apps,
-                mode = state.mode,
-                homeRequests = state.homeRequests,
-                bannerLoader = bannerLoader,
-                onLaunch = callbacks.onLaunch,
-                onOpenActions = callbacks.onOpenActions,
-                onMoveBy = callbacks.onMoveBy,
-                onDrop = callbacks.onDrop,
-                modifier = Modifier.align(Alignment.Center).fillMaxWidth(),
-            )
+            Column(Modifier.align(Alignment.Center).fillMaxWidth()) {
+                Text(
+                    text = stringResource(R.string.apps),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = HeadingSize,
+                    maxLines = 1,
+                    modifier = Modifier.padding(start = ScreenMargin),
+                )
+                AppRow(
+                    apps = state.apps,
+                    style = state.appStyle,
+                    mode = state.mode,
+                    homeRequests = state.homeRequests,
+                    bannerLoader = bannerLoader,
+                    onLaunch = callbacks.onLaunch,
+                    onOpenActions = callbacks.onOpenActions,
+                    onMoveBy = callbacks.onMoveBy,
+                    onDrop = callbacks.onDrop,
+                    modifier = Modifier.fillMaxWidth(),
+                    glow = glow,
+                )
+            }
         }
         if (state.mode is HomeMode.Moving) {
             MoveHint(Modifier.align(Alignment.BottomCenter).padding(bottom = 48.dp))

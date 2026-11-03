@@ -17,10 +17,12 @@ import rs.bonge.stauncher.StauncherApplication
 import rs.bonge.stauncher.apps.InstalledApp
 import rs.bonge.stauncher.layout.Arranged
 import rs.bonge.stauncher.layout.Layout
+import rs.bonge.stauncher.settings.AppStyle
 import java.io.IOException
 
 class HomeViewModel(
     arranged: Flow<Arranged>,
+    appStyle: Flow<AppStyle>,
     private val saveLayout: suspend (Layout) -> Unit,
 ) : ViewModel() {
     // What the user is in the middle of. Package names rather than apps, so it survives a rescan.
@@ -43,8 +45,9 @@ class HomeViewModel(
     // No stop timeout: once the UI stops collecting, the upstream stops too, which unregisters the package callback.
     private val latest: StateFlow<Arranged?> = arranged.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
 
+    // The state is built only once the style is known too, so the row never flashes the other style first.
     val uiState: StateFlow<HomeUiState> =
-        combine(latest, pending, homeRequests, ::build)
+        combine(latest, pending, homeRequests, appStyle, ::build)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), HomeUiState())
 
     fun openActions(app: InstalledApp) {
@@ -107,26 +110,22 @@ class HomeViewModel(
         arranged: Arranged?,
         pending: Pending?,
         homeRequests: Int,
+        appStyle: AppStyle,
     ): HomeUiState {
-        if (arranged == null) return HomeUiState(homeRequests = homeRequests)
+        if (arranged == null) return HomeUiState(homeRequests = homeRequests, appStyle = appStyle)
         val visible = arranged.visible
         val target = visible.firstOrNull { it.packageName == pending?.packageName }
         return when {
             target == null -> {
-                HomeUiState(visible, loaded = true, homeRequests = homeRequests)
+                HomeUiState(visible, loaded = true, homeRequests = homeRequests, appStyle = appStyle)
             }
 
             pending is Pending.Moving -> {
-                HomeUiState(
-                    preview(visible, pending.order),
-                    true,
-                    HomeMode.Moving(target),
-                    homeRequests,
-                )
+                HomeUiState(preview(visible, pending.order), true, HomeMode.Moving(target), homeRequests, appStyle)
             }
 
             else -> {
-                HomeUiState(visible, true, HomeMode.Actions(target), homeRequests)
+                HomeUiState(visible, true, HomeMode.Actions(target), homeRequests, appStyle)
             }
         }
     }
@@ -145,7 +144,11 @@ class HomeViewModel(
             viewModelFactory {
                 initializer {
                     val container = (this[APPLICATION_KEY] as StauncherApplication).container
-                    HomeViewModel(container.arrangedApps, container.layoutRepository::save)
+                    HomeViewModel(
+                        container.arrangedApps,
+                        container.settingsRepository.appStyle,
+                        container.layoutRepository::save,
+                    )
                 }
             }
     }

@@ -28,15 +28,22 @@ class SettingsViewModelTest {
     private val b = testApp("b", firstInstallTime = 2)
 
     private val layout = MutableStateFlow(Layout(order = listOf("a", "b"), hidden = setOf("b")))
+    private val appStyle = MutableStateFlow(AppStyle.RoundIcons)
     private val saved = mutableListOf<Layout>()
 
+    // Toggling feeds back into the style, like the real repository does.
     private fun TestScope.viewModel(apps: List<InstalledApp> = listOf(a, b)): SettingsViewModel {
         val arranged = combine(MutableStateFlow(apps), layout, ::arrangeApps)
         val viewModel =
-            SettingsViewModel(arranged) {
-                saved += it
-                layout.value = it
-            }
+            SettingsViewModel(
+                arranged,
+                appStyle,
+                saveLayout = {
+                    saved += it
+                    layout.value = it
+                },
+                saveAppStyleToggle = { appStyle.value = appStyle.value.next() },
+            )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         return viewModel
     }
@@ -78,9 +85,22 @@ class SettingsViewModelTest {
         }
 
     @Test
+    fun `switches between the two app styles`() =
+        runTest {
+            val viewModel = viewModel()
+            assertEquals(AppStyle.RoundIcons, viewModel.uiState.value.appStyle)
+
+            viewModel.toggleAppStyle()
+            assertEquals(AppStyle.Banners, viewModel.uiState.value.appStyle)
+
+            viewModel.toggleAppStyle()
+            assertEquals(AppStyle.RoundIcons, viewModel.uiState.value.appStyle)
+        }
+
+    @Test
     fun `is not loaded before the layout is known`() =
         runTest {
-            val viewModel = SettingsViewModel(emptyFlow()) {}
+            val viewModel = SettingsViewModel(emptyFlow(), appStyle, {}, {})
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
 
             assertFalse(viewModel.uiState.value.loaded)
