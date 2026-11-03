@@ -6,20 +6,20 @@ plugins {
 
 // The release signing config exists only when all three variables are set, so CI and a fresh clone build an unsigned
 // release APK. The keystore file is outside the repository and its password is never written to disk.
-val releaseKeystoreFile = providers.environmentVariable("STAUNCHER_KEYSTORE_FILE")
-val releaseKeyAlias = providers.environmentVariable("STAUNCHER_KEY_ALIAS")
-val releaseKeystorePassword = providers.environmentVariable("STAUNCHER_KEYSTORE_PASSWORD")
+val releaseKeystoreFile = providers.environmentVariable("LAUNCHERY_KEYSTORE_FILE")
+val releaseKeyAlias = providers.environmentVariable("LAUNCHERY_KEY_ALIAS")
+val releaseKeystorePassword = providers.environmentVariable("LAUNCHERY_KEYSTORE_PASSWORD")
 val hasReleaseSigning =
     releaseKeystoreFile.isPresent && releaseKeyAlias.isPresent && releaseKeystorePassword.isPresent
 
 android {
-    namespace = "rs.bonge.stauncher"
+    namespace = "rs.bonge.launchery"
     compileSdk {
         version = release(37) { minorApiLevel = 2 }
     }
 
     defaultConfig {
-        applicationId = "rs.bonge.stauncher"
+        applicationId = "rs.bonge.launchery"
         minSdk = 34
         targetSdk = 37
         versionCode = 1

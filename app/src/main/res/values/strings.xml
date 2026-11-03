@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">Stauncher</string>
+    <string name="app_name">Launchery</string>
     <string name="launch_failed">Can’t open %1$s</string>
     <string name="settings">Settings</string>
     <string name="all_settings">All settings</string>

@@ -6,7 +6,7 @@
          must not declare HOME, or Home on the emulator would offer it as a second home app. -->
     <application tools:remove="android:banner">
         <activity
-            android:name=".HomeActivity"
+            android:name=".home.HomeActivity"
             android:exported="true"
             tools:node="replace">
             <intent-filter>

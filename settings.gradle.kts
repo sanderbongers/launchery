@@ -26,6 +26,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "stauncher"
+rootProject.name = "launchery"
 
 include(":app")
