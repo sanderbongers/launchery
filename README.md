@@ -159,13 +159,13 @@ turns solid white. These steps come from Google and weren't tested.
 
 ## Known issues
 
-With the stock launcher disabled, testing showed these issues:
+With the stock launcher disabled:
 
 - **The YouTube button does nothing.** Launchery receives no key event from it, and the system doesn't open anything.
 - **Apps that remap buttons through an accessibility service take over.** With TV Quick Actions turned on, Home opened
   Projectivy and the YouTube button opened SmartTube, and neither press reached Launchery.
-- **The stock launcher's profile switcher and quick settings panel are gone.** They're part of the stock launcher and
-  weren't checked one by one.
+- **The stock launcher's profile switcher and quick settings panel are gone.** This follows from disabling the stock
+  launcher and wasn't checked in testing.
 
 These kept working with the stock launcher disabled:
 
