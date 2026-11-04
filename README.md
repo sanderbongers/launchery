@@ -1,62 +1,87 @@
-# Launchery
+# ![](.github/images/icon.svg) ![Launchery](.github/images/banner.svg)
 
-Launchery is an alternative app launcher for Android TV and Google TV that mainly does less. It leaves out the
-advertising, sponsored recommendations, and promotional clutter that all compete for your attention. Instead, it sticks
-to the essentials: a simple home screen for opening apps.
+Launchery is an alternative launcher for Android TV and Google TV that mainly does less. It leaves out the advertising,
+sponsored recommendations, and promotional clutter that compete for your attention, and sticks to the essentials: a
+simple home screen for opening apps.
+
+Launchery doesn't request the `INTERNET` permission, so it can't connect to the internet at all. The only Android
+permission it requests is `REQUEST_DELETE_PACKAGES`, which lets it open the system's uninstall dialog.
 
 ## Status
 
-Pre-release 0.1.0. Launchery works as a home screen on a Chromecast with Google TV 4K running Android 14, the only
-device it has been tested on. The HD model and other Android TV or Google TV devices are untested. Launchery needs
-Android 14 (API 34) or newer.
+Launchery 0.1.0 is a pre-release. It requires Android 14 (API level 34) or higher. It has been tested only on a
+Chromecast with Google TV (4K) running Android 14, where it works as the home screen. The Chromecast with Google TV (HD)
+and other Android TV and Google TV devices are untested. Test results in this README come from that Chromecast unless
+stated otherwise.
 
-## Using it
+## Usage
 
-- Select starts an app. Holding select opens its actions: App info, Move, Hide and, for apps you installed, Uninstall.
-  Force stop is in App info.
-- Left and right move along the row. At the first or the last app, hold the key to break through to the other end. A
-  short press there does nothing, so a stray press never loops the row.
-- Up from the row reaches the cog. Select opens the settings: "Show apps as" switches between round icons and banners,
-  "Hidden apps" lists what you hid and "All settings" opens the system settings. Holding select on the cog goes
-  straight to the system settings.
+- Press Select to open an app. Press and hold Select to show its actions: **App info**, **Move**, **Hide**, and, for
+  apps you installed, **Uninstall**. **Force stop** is in **App info**.
+- Press Left or Right to move along the row. At the first or last app, press and hold the button to wrap around to the
+  other end. A short press there does nothing, so a stray press never wraps around.
+- Press Up to reach the settings button, and press Select to open the settings:
+  - **Show apps as** switches between round icons and banners.
+  - **Hidden apps** lists the apps you've hidden.
+  - **All settings** opens the system settings.
 
-## Installing
+  To go straight to the system settings, press and hold Select on the settings button.
 
-You need a computer with `adb` and Wireless debugging switched on in the TV's Developer options. To show Developer
-options, open Settings > System > About and select "Android TV OS build" seven times. Wireless debugging is then in
-Settings > System > Developer options. The commands are the same in any shell.
+## Install
 
-> **Install and start Launchery before you disable the stock launcher.** With no other home app the TV has no home
+Before you begin, you need:
+
+- A computer with [`adb`](https://developer.android.com/tools/adb). The commands work the same in any shell.
+- **Wireless debugging** turned on in the TV's Developer options. To show **Developer options**, go to
+  **Settings > System > About** and select **Android TV OS build** seven times. Wireless debugging is then in
+  **Settings > System > Developer options**.
+
+> [!WARNING]
+> Install and open Launchery before you disable the stock launcher. Without another home app, the TV has no home
 > screen, and Settings becomes hard to reach.
 
 1. Download `launchery-0.1.0.apk` and `launchery-0.1.0.apk.sha256` from the
-   [release page](https://github.com/sanderbongers/launchery/releases), and check them as described in
-   [Checking a download](#checking-a-download).
-2. Connect to the TV. The pairing code, the pairing port and the connection port are on the Wireless debugging screen,
-   and the connection port changes after a restart of the TV.
+   [Releases page](https://github.com/sanderbongers/launchery/releases), and then
+   [verify the download](#verify-the-download).
+2. Pair with the TV and connect to it:
 
    ```bash
    adb pair <tv-ip>:<pairing-port>
    adb connect <tv-ip>:<connection-port>
    ```
 
-3. Install Launchery, then start it once from the TV's app list.
+   Use the IP address, ports, and pairing code shown on the TV's **Wireless debugging** screen. `adb pair` prompts for
+   the pairing code.
+
+   <details>
+   <summary>Background</summary>
+
+   The connection port changes when the TV restarts.
+
+   </details>
+
+3. Install Launchery:
 
    ```bash
    adb install -r launchery-0.1.0.apk
    ```
 
-4. Optional: after the first start, compile the app. A fresh `adb install` leaves it uncompiled, which on the tested
-   Chromecast meant a cold start of about 1 second until Android's background job compiled it, and about 0.4
-   seconds after. This does it at once.
+4. On the TV, open Launchery once from the app list.
+5. Optional: Compile Launchery ahead of time:
 
    ```bash
    adb shell cmd package compile -f -m speed-profile rs.bonge.launchery
    ```
 
-5. Make Launchery the home screen. Give it the Home role, disable the stock launcher, press Home and check that
-   Launchery opens, and only then disable the second package. On the tested Chromecast, with only the stock launcher
-   disabled, Home still opened Google's recovery screen from `setupwraith` instead of Launchery.
+   <details>
+   <summary>Background</summary>
+
+   A fresh `adb install` leaves the app uncompiled. In testing, that meant a cold start of about 1 second until
+   Android's background job compiled it, and about 0.4 seconds after. This command compiles it right away.
+
+   </details>
+
+6. Make Launchery the home screen: give it the Home role, and disable the stock launcher and `setupwraith`:
 
    ```bash
    adb shell cmd role add-role-holder --user 0 android.app.role.HOME rs.bonge.launchery
@@ -64,104 +89,175 @@ Settings > System > Developer options. The commands are the same in any shell.
    adb shell pm disable-user --user 0 com.google.android.tungsten.setupwraith
    ```
 
-These package names come from community guides. They were run on the tested Chromecast, and `launcherx` also on an
-emulator, which has no `setupwraith`. Other devices may use other names.
+   <details>
+   <summary>Background</summary>
 
-### Checking a download
+   Disabling only the stock launcher (`launcherx`) isn't enough: in testing, Home then opened Google's recovery screen
+   from `setupwraith` instead of Launchery.
+
+   The package names come from community guides. The commands were run on the Chromecast, and the `launcherx` one also
+   on an emulator, which has no `setupwraith`. Other devices may use other names.
+
+   </details>
+
+7. Press Home and check that Launchery opens. If it doesn't, [restore the stock launcher](#restore-the-stock-launcher).
+
+### Verify the download
+
+Check the checksum:
 
 ```bash
 shasum -a 256 -c launchery-0.1.0.apk.sha256
+```
+
+The output ends in `OK`.
+
+Check the signing certificate with `apksigner` from the Android SDK Build-Tools:
+
+```bash
 apksigner verify --print-certs launchery-0.1.0.apk
 ```
 
-The first command should print `OK`. The second needs `apksigner` from the Android SDK build tools and prints the
-signing certificate, which must match this fingerprint:
+The output must include these lines:
 
 ```text
 Signer #1 certificate DN: CN=Launchery
 Signer #1 certificate SHA-256 digest: 20e974b26c7c12639b36f9f8373053e13df03c5c704a8be36a6925a251442c64
 ```
 
-## Undoing it
+If either check fails, don't install the APK.
 
-```bash
-adb shell pm enable com.google.android.apps.tv.launcherx
-adb shell pm enable com.google.android.tungsten.setupwraith
-```
+## Update
 
-Home then opens the stock launcher again, because it has the higher priority. If another launcher held the Home role
-before, give it back with `adb shell cmd role add-role-holder --user 0 android.app.role.HOME <package>`. On the tested
-Chromecast, Projectivy was that launcher.
+Launchery doesn't update itself. To install a newer version:
 
-To remove Launchery as well, uninstall it once Home opens the other launcher:
+1. Download the new APK and its `.sha256` file, and [verify the download](#verify-the-download).
+2. Connect to the TV as in step 2 of [Install](#install).
+3. Install the new version over the current one:
 
-```bash
-adb uninstall rs.bonge.launchery
-```
+   ```bash
+   adb install -r launchery-<version>.apk
+   ```
 
-## If something goes wrong
+4. Optional: After you open the new version once, compile it ahead of time, as in step 5 of [Install](#install).
 
-The undo above needs `adb`. If `adb` stops connecting while the stock launcher is disabled, Settings is hard to reach:
+<details>
+<summary>Background</summary>
 
-- From Launchery, the cog opens the system settings. On the tested Chromecast, Developer options and Wireless debugging
-  could be reached by hand there after a restart, with a new connection port.
-- Wireless debugging was still on after one restart of the tested Chromecast, but a switch-off after a restart or sleep
-  has been reported, so check it before relying on `adb`.
+Your app order and hidden apps are kept, because every release is signed with the same key.
 
-Holding the Assistant button and saying "open settings" is not a route: on the tested Chromecast Google showed a
-"Verify network change" screen and did not open Settings.
+</details>
 
-If Launchery does not start and `adb` does not connect, a factory reset is the last resort. It clears all data on the
-Chromecast, which can't be recovered. Google's
-[reset instructions](https://support.google.com/chromecast/answer/6254654) for the Chromecast with Google TV: while it
-is on, hold the button on its back until the LED blinks yellow, and release it when the LED turns solid white. This
-comes from Google's support page and was not tried.
+## Restore the stock launcher
 
-## Known losses
+1. Re-enable the stock launcher and `setupwraith`:
 
-What was seen on the tested Chromecast with the stock launcher disabled:
+   ```bash
+   adb shell pm enable com.google.android.apps.tv.launcherx
+   adb shell pm enable com.google.android.tungsten.setupwraith
+   ```
 
-- **The YouTube button does nothing.** Launchery receives no key from it, and the system starts nothing.
-- **Apps that remap keys through an accessibility service take over.** With TV Quick Actions switched on, Home opened
+   Home opens the stock launcher again.
+
+   <details>
+   <summary>Background</summary>
+
+   The stock launcher takes over because it has the higher priority.
+
+   </details>
+
+2. If another launcher held the Home role before, give the role back to it:
+
+   ```bash
+   adb shell cmd role add-role-holder --user 0 android.app.role.HOME <package>
+   ```
+
+   Replace `<package>` with that launcher's package name.
+
+   <details>
+   <summary>Background</summary>
+
+   In testing, that launcher was Projectivy.
+
+   </details>
+
+3. Optional: To remove Launchery as well, uninstall it once Home opens the other launcher:
+
+   ```bash
+   adb uninstall rs.bonge.launchery
+   ```
+
+## Troubleshooting
+
+Restoring the stock launcher requires `adb`. If `adb` can't connect while the stock launcher is disabled, Settings is
+hard to reach:
+
+- **Open Settings from Launchery.** Select the settings button, and then **All settings**. In testing, Developer
+  options and Wireless debugging could be reached there by hand after a restart, with a new connection port.
+- **Check that Wireless debugging is on before you rely on `adb`.** It stayed on after one restart in testing, but
+  others report that it can turn off after a restart or sleep.
+- **Asking the Assistant to open Settings doesn't work.** Holding the Assistant button and saying "open settings"
+  showed a "Verify network change" screen instead of Settings.
+
+If Launchery doesn't start and `adb` can't connect, a factory reset is the last resort. It erases all data on the
+Chromecast, and the data can't be recovered. Google's
+[factory reset instructions](https://support.google.com/chromecast/answer/6254654) for the Chromecast with Google TV:
+while it's on, press and hold the button on its back until the LED blinks yellow, and then release it when the LED
+turns solid white. These steps come from Google and weren't tested.
+
+## Known issues
+
+With the stock launcher disabled, testing showed these issues:
+
+- **The YouTube button does nothing.** Launchery receives no key event from it, and the system doesn't open anything.
+- **Apps that remap buttons through an accessibility service take over.** With TV Quick Actions turned on, Home opened
   Projectivy and the YouTube button opened SmartTube, and neither press reached Launchery.
-- **The profile switcher and the quick-settings panel of the stock launcher are gone.** They belong to the stock
-  launcher and were not checked one by one.
+- **The stock launcher's profile switcher and quick settings panel are gone.** They're part of the stock launcher and
+  weren't checked one by one.
 
-Seen to work: Home and Back, a restart, sleep and wake (Launchery kept running and was back in about a tenth of a
-second after the screen came on), the volume keys when the remote's volume control is set to the Chromecast, and
-casting from a phone. Casting was tried with NLZIET and NPO Start (video) and Spotify (audio, which plays in the
-background without a screen on the TV). Some people report that disabling the stock launcher breaks casting; that
-did not happen here.
+These kept working with the stock launcher disabled:
+
+- Home and Back.
+- Restarting the TV.
+- Sleep and wake. Launchery kept running, and was back about a tenth of a second after the screen turned on.
+- The volume buttons, when the remote's volume control is set to the Chromecast.
+- Casting from a phone, tried with NLZIET and NPO Start (video) and Spotify (audio, which plays in the background
+  without a screen on the TV). Some people report that disabling the stock launcher breaks casting, but that didn't
+  happen in testing.
 
 ## Development
 
-You need a JDK 17 or newer and the Android SDK with platform 37.2. Point `JAVA_HOME` at the JDK and `ANDROID_HOME` at
-the SDK, or put `sdk.dir` in `local.properties`.
+Building Launchery requires JDK 17 or higher and the Android SDK with the SDK Platform for API level 37.2. Set
+`JAVA_HOME` to the JDK and `ANDROID_HOME` to the SDK, or set `sdk.dir` in `local.properties`.
 
 ```bash
-./gradlew check          # lint, format check and unit tests
-./gradlew assembleDebug  # debug APK in app/build/outputs/apk/debug/
+./gradlew check          # Run lint, the format check, and unit tests
+./gradlew assembleDebug  # Build a debug APK in app/build/outputs/apk/debug/
+./gradlew spotlessApply  # Fix formatting
 ```
 
-Optional commands:
+### Build a signed release
 
-```bash
-./gradlew spotlessApply  # fix formatting
-```
-
-### Signed release build
-
-Without a keystore, `./gradlew assembleRelease` builds an unsigned release APK. To sign it, set
-`LAUNCHERY_KEYSTORE_FILE` (an absolute path), `LAUNCHERY_KEY_ALIAS` and `LAUNCHERY_KEYSTORE_PASSWORD` in the terminal,
-and build without the configuration cache, so that Gradle does not store the password in it:
+In your terminal, set the environment variables `LAUNCHERY_KEYSTORE_FILE` (an absolute path), `LAUNCHERY_KEY_ALIAS`,
+and `LAUNCHERY_KEYSTORE_PASSWORD`, and then build the release and stop the Gradle daemon:
 
 ```bash
 ./gradlew assembleRelease --no-configuration-cache
 ./gradlew --stop
 ```
 
-The APK is `app/build/outputs/apk/release/app-release.apk`. Stopping the daemon ends the process that held the password.
+The signed APK is `app/build/outputs/apk/release/app-release.apk`.
+
+<details>
+<summary>Background</summary>
+
+If any of these variables is missing, `assembleRelease` builds an unsigned APK. Building without the configuration
+cache keeps Gradle from storing the password in it, and stopping the daemon ends the process that held the password.
+
+</details>
 
 ## License
 
-[MIT](LICENSE)
+Launchery is released under the [MIT License](LICENSE).
+
+Android TV, Google TV, and Chromecast are trademarks of Google LLC.

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="18 18 72 72">
+  <!-- Converted from app/src/main/res/mipmap-anydpi/ic_launcher.xml and its layers, cropped to the visible 72 dp and
+       masked to a circle, as Launchery shows round icons; keep them in step. -->
+  <defs>
+    <clipPath id="mask">
+      <circle cx="54" cy="54" r="36" />
+    </clipPath>
+    <linearGradient id="shadow" gradientUnits="userSpaceOnUse" x1="54" y1="54" x2="108" y2="108">
+      <stop offset="0" stop-color="#000000" stop-opacity="0.4" />
+      <stop offset="1" stop-color="#000000" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <g clip-path="url(#mask)">
+    <path fill="#1C1C21" d="M0,0h108v108h-108z" />
+    <path fill="url(#shadow)" d="M81,40.5L81,72L31.5,72L211.5,252L261,252L261,220.5Z" />
+    <path fill="#C9DDEC" d="M31.5,36H76.5A4.5,4.5 0,0 1 81,40.5V54.0H27V40.5A4.5,4.5 0,0 1 31.5,36Z" />
+    <path fill="#E4F3FF" d="M27,54.0H81V67.5A4.5,4.5 0,0 1 76.5,72H31.5A4.5,4.5 0,0 1 27,67.5Z" />
+    <path fill="#16232E" d="M36.738,54.0A4.788,4.788 0,1 0 46.314,54.0A4.788,4.788 0,1 0 36.738,54.0ZM49.212,54.0A4.788,4.788 0,1 0 58.788,54.0A4.788,4.788 0,1 0 49.212,54.0ZM61.686,54.0A4.788,4.788 0,1 0 71.262,54.0A4.788,4.788 0,1 0 61.686,54.0Z" />
+  </g>
+</svg>
