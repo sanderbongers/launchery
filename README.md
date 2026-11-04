@@ -30,7 +30,8 @@ and other Android TV and Google TV devices are untested. Test results in this RE
 
 Before you begin, you need:
 
-- A computer with [`adb`](https://developer.android.com/tools/adb). The commands work the same in any shell.
+- A computer with [`adb`](https://developer.android.com/tools/adb), on the same network as the TV. The commands work
+  the same in any shell.
 - **Wireless debugging** turned on in the TV's Developer options. To show **Developer options**, go to
   **Settings > System > About** and select **Android TV OS build** seven times. Wireless debugging is then in
   **Settings > System > Developer options**.
@@ -65,7 +66,13 @@ Before you begin, you need:
    adb shell cmd package compile -f -m speed-profile rs.bonge.launchery
    ```
 
-6. Make Launchery the home screen: give it the Home role, and disable the stock launcher and `setupwraith`:
+6. Note the package name of the app that holds the Home role now, so that you can give the role back later:
+
+   ```bash
+   adb shell cmd role get-role-holders android.app.role.HOME
+   ```
+
+7. Make Launchery the home screen: give it the Home role, and disable the stock launcher and `setupwraith`:
 
    ```bash
    adb shell cmd role add-role-holder --user 0 android.app.role.HOME rs.bonge.launchery
@@ -73,7 +80,7 @@ Before you begin, you need:
    adb shell pm disable-user --user 0 com.google.android.tungsten.setupwraith
    ```
 
-7. Press Home and check that Launchery opens. If it doesn't, [restore the stock launcher](#restore-the-stock-launcher).
+8. Press Home and check that Launchery opens. If it doesn't, [restore the stock launcher](#restore-the-stock-launcher).
 
 ### Verify the download
 
@@ -125,13 +132,13 @@ Launchery doesn't update itself. To install a newer version:
 
    Home opens the stock launcher again.
 
-2. If another launcher held the Home role before, give the role back to it:
+2. Give the Home role back to the app that held it before:
 
    ```bash
    adb shell cmd role add-role-holder --user 0 android.app.role.HOME <package>
    ```
 
-   Replace `<package>` with that launcher's package name.
+   Replace `<package>` with the package name you noted in step 6 of [Install](#install).
 
 3. Optional: To remove Launchery as well, uninstall it once Home opens the other launcher:
 
@@ -141,18 +148,26 @@ Launchery doesn't update itself. To install a newer version:
 
 ## Troubleshooting
 
-Restoring the stock launcher requires `adb`. If `adb` can't connect while the stock launcher is disabled, Settings is
-hard to reach:
+### `adb` can't connect
 
-- **Open Settings from Launchery.** Select the settings button, and then **All settings**. In testing, Developer
-  options and Wireless debugging could be reached there by hand after a restart, with a new connection port.
-- **Check that Wireless debugging is on before you rely on `adb`.** It stayed on after one restart in testing, but
-  others report that it can turn off after a restart or sleep.
-- **Asking the Assistant to open Settings doesn't work.** Holding the Assistant button and saying "open settings"
-  showed a "Verify network change" screen instead of Settings.
+Open the **Wireless debugging** screen: in Launchery, select the settings button and then **All settings**, and go to
+**System > Developer options > Wireless debugging**. Then check two things:
 
-If Launchery doesn't start and `adb` can't connect, a factory reset is the last resort. It erases all data on the
-Chromecast, and the data can't be recovered. Google's
+- **Wireless debugging is on.** It stayed on after one restart in testing, but others report that it can turn off
+  after a restart or sleep.
+- **The connection port is current.** It changed after a restart in testing. Connect with the port shown now:
+
+  ```bash
+  adb connect <tv-ip>:<connection-port>
+  ```
+
+### Launchery doesn't start
+
+[Restore the stock launcher](#restore-the-stock-launcher) with `adb`.
+
+If `adb` can't connect either, Settings is hard to reach without a home screen. Asking the Assistant to open Settings
+doesn't work: holding the Assistant button and saying "open settings" showed a "Verify network change" screen instead.
+A factory reset is the last resort. It erases all data on the Chromecast, and the data can't be recovered. Google's
 [factory reset instructions](https://support.google.com/chromecast/answer/6254654) for the Chromecast with Google TV:
 while it's on, press and hold the button on its back until the LED blinks yellow, and then release it when the LED
 turns solid white. These steps come from Google and weren't tested.
@@ -162,8 +177,9 @@ turns solid white. These steps come from Google and weren't tested.
 With the stock launcher disabled:
 
 - **The YouTube button does nothing.** Launchery receives no key event from it, and the system doesn't open anything.
-- **Apps that remap buttons through an accessibility service take over.** With TV Quick Actions turned on, Home opened
-  Projectivy and the YouTube button opened SmartTube, and neither press reached Launchery.
+  An app that remaps buttons can give it a target: in testing, TV Quick Actions made it open SmartTube.
+- **An app that remaps Home takes Home away from Launchery.** With Home mapped to Projectivy in TV Quick Actions, Home
+  opened Projectivy and never reached Launchery. Once that mapping was removed, Home opened Launchery again.
 - **The stock launcher's profile switcher and quick settings panel are gone.** This follows from disabling the stock
   launcher and wasn't checked in testing.
 
@@ -174,8 +190,9 @@ These kept working with the stock launcher disabled:
 - Sleep and wake. Launchery kept running, and was back about a tenth of a second after the screen turned on.
 - The volume buttons, when the remote's volume control is set to the Chromecast.
 - Casting from a phone, tried with NLZIET and NPO Start (video) and Spotify (audio, which plays in the background
-  without a screen on the TV). Some people report that disabling the stock launcher breaks casting, but that didn't
-  happen in testing.
+  without a screen on the TV). Some people report that disabling the stock launcher breaks casting. In testing, video
+  casting failed for a few minutes soon after a restart, while an earlier Spotify cast was still running. The cause
+  wasn't found, and the same apps cast fine later.
 
 ## Development
 
