@@ -11,8 +11,7 @@ permission it requests is `REQUEST_DELETE_PACKAGES`, which lets it open the syst
 
 Launchery 0.1.0 is a pre-release. It requires Android 14 (API level 34) or higher. It has been tested only on a
 Chromecast with Google TV (4K) running Android 14, where it works as the home screen. The Chromecast with Google TV (HD)
-and other Android TV and Google TV devices are untested. Test results in this README come from that Chromecast unless
-stated otherwise.
+and other Android TV and Google TV devices are untested. Test results in this README come from that Chromecast.
 
 ## Usage
 
@@ -53,13 +52,6 @@ Before you begin, you need:
    Use the IP address, ports, and pairing code shown on the TV's **Wireless debugging** screen. `adb pair` prompts for
    the pairing code.
 
-   <details>
-   <summary>Background</summary>
-
-   The connection port changes when the TV restarts.
-
-   </details>
-
 3. Install Launchery:
 
    ```bash
@@ -73,14 +65,6 @@ Before you begin, you need:
    adb shell cmd package compile -f -m speed-profile rs.bonge.launchery
    ```
 
-   <details>
-   <summary>Background</summary>
-
-   A fresh `adb install` leaves the app uncompiled. In testing, that meant a cold start of about 1 second until
-   Android's background job compiled it, and about 0.4 seconds after. This command compiles it right away.
-
-   </details>
-
 6. Make Launchery the home screen: give it the Home role, and disable the stock launcher and `setupwraith`:
 
    ```bash
@@ -88,17 +72,6 @@ Before you begin, you need:
    adb shell pm disable-user --user 0 com.google.android.apps.tv.launcherx
    adb shell pm disable-user --user 0 com.google.android.tungsten.setupwraith
    ```
-
-   <details>
-   <summary>Background</summary>
-
-   Disabling only the stock launcher (`launcherx`) isn't enough: in testing, Home then opened Google's recovery screen
-   from `setupwraith` instead of Launchery.
-
-   The package names come from community guides. The commands were run on the Chromecast, and the `launcherx` one also
-   on an emulator, which has no `setupwraith`. Other devices may use other names.
-
-   </details>
 
 7. Press Home and check that Launchery opens. If it doesn't, [restore the stock launcher](#restore-the-stock-launcher).
 
@@ -141,13 +114,6 @@ Launchery doesn't update itself. To install a newer version:
 
 4. Optional: After you open the new version once, compile it ahead of time, as in step 5 of [Install](#install).
 
-<details>
-<summary>Background</summary>
-
-Your app order and hidden apps are kept, because every release is signed with the same key.
-
-</details>
-
 ## Restore the stock launcher
 
 1. Re-enable the stock launcher and `setupwraith`:
@@ -159,13 +125,6 @@ Your app order and hidden apps are kept, because every release is signed with th
 
    Home opens the stock launcher again.
 
-   <details>
-   <summary>Background</summary>
-
-   The stock launcher takes over because it has the higher priority.
-
-   </details>
-
 2. If another launcher held the Home role before, give the role back to it:
 
    ```bash
@@ -173,13 +132,6 @@ Your app order and hidden apps are kept, because every release is signed with th
    ```
 
    Replace `<package>` with that launcher's package name.
-
-   <details>
-   <summary>Background</summary>
-
-   In testing, that launcher was Projectivy.
-
-   </details>
 
 3. Optional: To remove Launchery as well, uninstall it once Home opens the other launcher:
 
@@ -247,14 +199,6 @@ and `LAUNCHERY_KEYSTORE_PASSWORD`, and then build the release and stop the Gradl
 ```
 
 The signed APK is `app/build/outputs/apk/release/app-release.apk`.
-
-<details>
-<summary>Background</summary>
-
-If any of these variables is missing, `assembleRelease` builds an unsigned APK. Building without the configuration
-cache keeps Gradle from storing the password in it, and stopping the daemon ends the process that held the password.
-
-</details>
 
 ## License
 
