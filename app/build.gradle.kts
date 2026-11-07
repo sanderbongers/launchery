@@ -69,6 +69,9 @@ android {
     lint {
         warningsAsErrors = true
         abortOnError = true
+        // These compare against the latest upstream releases, so as errors they would fail an unchanged commit once a
+        // new version comes out. Informational keeps them in the lint report without failing the build.
+        informational += setOf("AndroidGradlePluginVersion", "GradleDependency", "NewerVersionAvailable")
     }
 }
 
