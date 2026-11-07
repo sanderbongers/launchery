@@ -4,6 +4,8 @@ Launchery is an alternative launcher for Android TV and Google TV that mainly do
 sponsored recommendations, and promotional clutter that compete for your attention, and sticks to the essentials: a
 simple home screen for opening apps.
 
+![Launchery's home screen, with YouTube focused](.github/images/home.png)
+
 Launchery doesn't request the `INTERNET` permission, so it can't connect to the internet at all. The only Android
 permission it requests is `REQUEST_DELETE_PACKAGES`, which lets it open the system's uninstall dialog.
 
@@ -14,6 +16,8 @@ Chromecast with Google TV (4K) running Android 14, where it works as the home sc
 and other Android TV and Google TV devices are untested. Test results in this README come from that Chromecast.
 
 ## Usage
+
+https://github.com/user-attachments/assets/c3a6c656-bec2-423e-8251-08950a626a5b
 
 - Press Select to open an app. Press and hold Select to show its actions: **App info**, **Move**, **Hide**, and, for
   apps you installed, **Uninstall**. **Force stop** is in **App info**.
