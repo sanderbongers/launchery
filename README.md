@@ -4,7 +4,7 @@ Launchery is an alternative launcher for Android TV and Google TV that mainly do
 sponsored recommendations, and promotional clutter that compete for your attention, and sticks to the essentials: a
 simple home screen for opening apps.
 
-![Launchery's home screen, with YouTube focused](.github/images/home.png)
+![Launchery's home screen, with YouTube focused](.github/images/home.webp)
 
 Launchery doesn't request the `INTERNET` permission, so it can't connect to the internet at all. The only Android
 permission it requests is `REQUEST_DELETE_PACKAGES`, which lets it open the system's uninstall dialog.
