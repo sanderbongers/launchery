@@ -30,12 +30,14 @@ import androidx.tv.material3.Text
 import rs.bonge.launchery.R
 import rs.bonge.launchery.ui.ScreenMargin
 
-// The measurements are those of the top menu of Google TV: a capsule 44 dp high, with round buttons of 36 dp in it.
+// The measurements are those of the top menu of Google TV: a capsule 44 dp high, with round buttons of 36 dp in it, and
+// 13 dp between the capsule and the time.
 private val BarTop = 32.dp
 private val CapsuleHeight = 44.dp
+private val CapsuleTimeGap = 13.dp
 
 /**
- * The top bar, reached with up from the row: the settings button at the far left and the [time] at the far right. While
+ * The top bar, reached with up from the row: the [time] at the far right with the settings button just before it. While
  * [focusable] is false nothing in the bar can take focus, so the first focus does not land here before the row has its
  * apps.
  */
@@ -54,7 +56,7 @@ fun TopBar(
                 .fillMaxWidth()
                 .padding(start = ScreenMargin, top = BarTop, end = ScreenMargin)
                 .focusProperties { canFocus = focusable },
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(CapsuleTimeGap, Alignment.End),
     ) {
         SettingsButton(onOpenSettings, onOpenSystemSettings, Modifier.focusRequester(settingsFocus))
         Box(Modifier.height(CapsuleHeight), contentAlignment = Alignment.Center) {

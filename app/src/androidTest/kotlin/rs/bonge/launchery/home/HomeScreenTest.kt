@@ -450,17 +450,16 @@ class HomeScreenTest {
     }
 
     @Test
-    fun `puts the settings button at the left margin and the time at the right margin`() {
+    fun `puts the time at the right margin with the settings button just before it`() {
         showHome()
 
         rule.onNodeWithText("20:15").assertIsDisplayed()
         val screen = rule.onRoot().getUnclippedBoundsInRoot()
         val time = rule.onNodeWithText("20:15").getUnclippedBoundsInRoot()
         val settings = rule.onNodeWithContentDescription("Settings").getUnclippedBoundsInRoot()
-        // The button sits in a capsule that starts at the margin and has 4 dp of padding.
-        assertEquals(62f, settings.left.value, 0.5f)
         assertEquals((screen.right - 58.dp).value, time.right.value, 0.5f)
-        assertTrue("the button ends at ${settings.right}, the time starts at ${time.left}", settings.right <= time.left)
+        // The button sits in a capsule with 4 dp of padding, 13 dp before the time.
+        assertEquals((time.left - 13.dp - 4.dp).value, settings.right.value, 0.5f)
     }
 
     @Test
