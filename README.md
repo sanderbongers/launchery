@@ -17,7 +17,7 @@ It doesn't have the `INTERNET` permission, so it can't go online at all. Its onl
 
 ## Requirements
 
-- Android 14 or newer. Launchery 0.1.0 is a pre-release, tested only on a Chromecast with Google TV (4K) running
+- Android 14 or newer. Launchery 0.2.0 is a pre-release, tested only on a Chromecast with Google TV (4K) running
   Android 14.
 - A computer with [`adb`](https://developer.android.com/tools/adb) on the same network as the TV.
 - **Wireless debugging** turned on. To show **Developer options**, select **Android TV OS build** seven times in
@@ -25,7 +25,7 @@ It doesn't have the `INTERNET` permission, so it can't go online at all. Its onl
 
 ## Install
 
-1. Download `launchery-0.1.0.apk` and its `.sha256` file from
+1. Download `launchery-0.2.0.apk` and its `.sha256` file from
    [Releases](https://github.com/sanderbongers/launchery/releases), and [verify them](#verify-the-download).
 2. Pair with the TV and connect, using the address, ports and code on the TV's
    **Settings > System > Developer options > Wireless debugging** screen:
@@ -38,7 +38,7 @@ It doesn't have the `INTERNET` permission, so it can't go online at all. Its onl
 3. Install Launchery, then open it once from the TV's app list to check that it starts:
 
    ```bash
-   adb install -r launchery-0.1.0.apk
+   adb install -r launchery-0.2.0.apk
    ```
 
 4. Note which app is the home screen now, so you can switch back later. On a TV without another launcher, this is the
@@ -69,8 +69,8 @@ adb shell cmd package compile -f -m speed-profile rs.bonge.launchery
 ### Verify the download
 
 ```bash
-shasum -a 256 -c launchery-0.1.0.apk.sha256
-apksigner verify --print-certs launchery-0.1.0.apk
+shasum -a 256 -c launchery-0.2.0.apk.sha256
+apksigner verify --print-certs launchery-0.2.0.apk
 ```
 
 The first should end in `OK`. The second (from the Android SDK Build-Tools) must show:
