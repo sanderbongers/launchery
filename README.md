@@ -12,8 +12,7 @@ It doesn't have the `INTERNET` permission, so it can't go online at all. Its onl
 
 - One row of apps, as round icons or banners.
 - Move, hide and uninstall apps from the home screen.
-- A settings panel for Launchery's own options (rounded vs. banner app icons, unhiding apps), or to open the system
-  settings.
+- A settings panel for some Launchery options (icon style, unhiding apps) and the system settings.
 - No account, no network access, no background services.
 
 ## Requirements
