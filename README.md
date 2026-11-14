@@ -12,7 +12,7 @@ It doesn't have the `INTERNET` permission, so it can't go online at all. Its onl
 
 - One row of apps, as round icons or banners.
 - Move, hide and uninstall apps from the home screen.
-- A settings panel for some Launchery options (icon style, unhiding apps) and the system settings.
+- A settings panel for some Launchery options (round app icons vs banners, unhiding apps) and the system settings.
 - No account, no network access, no background services.
 
 ## Requirements
@@ -83,8 +83,6 @@ Signer #1 certificate SHA-256 digest: 20e974b26c7c12639b36f9f8373053e13df03c5c70
 If either check fails, don't install it.
 
 ## Usage
-
-https://github.com/user-attachments/assets/c3a6c656-bec2-423e-8251-08950a626a5b
 
 - Press and hold Select on an app for **App info**, **Move**, **Hide** and, for apps you installed, **Uninstall**.
 - At either end of the row, press and hold Left or Right to wrap around.
